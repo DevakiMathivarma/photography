@@ -1,0 +1,378 @@
+.notification-page {
+  display: flex;
+  gap: 24px;
+  padding: 24px;
+}
+
+.notification-list {
+  flex: 2;
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.notification-header,
+.notification-row {
+  display: grid;
+  grid-template-columns: 90px 1.5fr 1.5fr 1fr 1.2fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.notification-header {
+  font-size: 13px;
+  color: #777;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.notification-row {
+  padding: 12px 0;
+  border-bottom: 1px solid #f2f2f2;
+  font-size: 14px;
+}
+
+.notification-row:last-child {
+  border-bottom: none;
+}
+
+.actions button {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: none;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.actions .accept {
+  background: #e7f7ee;
+  color: #137333;
+}
+
+.actions .reject {
+  background: #fdeaea;
+  color: #b3261e;
+}
+
+.calendar-panel {
+  flex: 1;
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+#calendar {
+  margin-top: 12px;
+}
+
+.calendar-info {
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+/* ================= CALENDAR ================= */
+
+.calendar-panel {
+  width: 340px;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.calendar-header h4 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.calendar-nav button {
+  border: none;
+  background: #f3f3f3;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.calendar-week,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+}
+
+.calendar-week span {
+  font-weight: 600;
+  color: #777;
+  margin: 10px 0;
+}
+
+.calendar-grid span {
+  padding: 8px 0;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.calendar-grid span.active {
+  background: #9b1c1c;
+  color: #fff;
+}
+
+/* .calendar-grid span.has-event {
+  border: 1px solid #9b1c1c;
+} */
+.calendar-grid span.has-event {
+  border-left: 3px solid #9b1c1c;
+  border-bottom: 3px solid #9b1c1c;
+}
+
+.calendar-grid span.accepted-event {
+  background: #9b1c1c;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ================= EVENT CARD ================= */
+
+/* .event-card {
+  margin-top: 20px;
+  border-left: 6px solid #9b1c1c;
+  padding: 14px;
+  border-radius: 12px;
+  background: #fff;
+} */
+ .event-card {
+  margin-top: 20px;
+  padding: 16px;
+  border-left: 6px solid #9b1c1c;
+  border-bottom: 4px solid #9b1c1c;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.event-date {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.event-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.event-location {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.event-team {
+  display: flex;
+  gap: 6px;
+}
+
+.event-team span {
+  width: 30px;
+  height: 30px;
+  background: #000;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* dashboard top css */
+.team-dashboard-top {
+  display: flex;
+  gap: 24px;
+  padding: 24px;
+}
+
+/* WELCOME */
+.welcome-card {
+  width: 350px;
+  background: #f5eeee;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+  animation: fadeUp .6s ease;
+}
+
+.welcome-image img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+.welcome-content {
+  padding: 20px;
+  text-align: center;
+}
+
+.welcome-content h2 {
+  font-weight: 600;
+}
+
+.review-btn {
+  margin-top: 12px;
+  padding: 8px 18px;
+  background: #9b1c1c;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: .3s;
+}
+
+.review-btn:hover {
+  background: #7a1515;
+  transform: translateY(-2px);
+}
+
+/* RIGHT */
+.dashboard-right {
+  flex: 1;
+}
+
+/* ================= STAT CARDS ================= */
+
+.stats-cards {
+  display: flex;
+  gap: 24px;
+}
+
+.stat-card {
+  flex: 1;
+  background: #fff;
+  padding: 18px 20px;
+  border-radius: 18px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+  position: relative;
+  cursor: pointer;
+  transition: all .35s ease;
+  overflow: hidden;
+}
+
+/* Hover effect */
+.stat-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.08);
+}
+
+/* Top row */
+.stat-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 15px;
+  color: #555;
+  font-weight: 500;
+}
+
+/* Arrow button */
+.arrow-btn {
+  width: 26px;
+  height: 26px;
+  background: #f3f3f3;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  transition: .3s;
+}
+
+.stat-card:hover .arrow-btn {
+  background: #9b1c1c;
+  color: #fff;
+  transform: rotate(45deg);
+}
+
+/* Body */
+.stat-body {
+  margin-top: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.stat-body h2 {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+/* Mini Bars */
+.mini-bars {
+  width: 90px;
+  height: 40px;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.mini-bars div {
+  width: 4px;
+  background: #9b1c1c;
+  border-radius: 3px;
+  animation: growBars 1.2s ease forwards;
+}
+
+.mini-bars.light div {
+  background: #e6c9c9;
+}
+
+/* Random heights animation */
+@keyframes growBars {
+  from { height: 0; }
+  to { height: var(--h); }
+}
+
+/* GRAPH */
+/* .project-overview-card {
+  margin-top: 20px;
+  background: #fff;
+  padding: 20px;
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+  animation: fadeUp .8s ease;
+} */
+
+.project-overview-card {
+  margin-top: 20px;
+  background: #fff;
+  padding: 28px;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  animation: fadeUp .8s ease;
+  height: 420px;
+}
+
+#projectChart {
+  height: 320px !important;
+}
+.overview-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+#yearSelect {
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+/* Animation */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

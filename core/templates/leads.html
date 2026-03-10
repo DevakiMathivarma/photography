@@ -1,0 +1,868 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Leads{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/leads.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+<input type="hidden" id="csrf_token" value="{{ csrf_token }}">
+
+<!-- ── DELIVERABLES POPUP ───────────────────────────────────────── -->
+<div class="modal" id="deliverableModal">
+    <div class="modal-content">
+        <div class="payment-header">
+            <h3>Add Extra Deliverable</h3>
+            <button class="close-btn" onclick="closeDeliverableModal()">×</button>
+        </div>
+        <div class="field-group">
+            <label>Deliverable Name</label>
+            <input type="text" id="extraDeliverableName" placeholder="Eg: Instagram Reels">
+        </div>
+        <div class="field-group">
+            <label>Additional Price (₹)</label>
+            <input type="number" id="extraDeliverablePrice" placeholder="Eg: 5000">
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeDeliverableModal()">Cancel</button>
+            <button class="btn-primary" onclick="addExtraDeliverable()">Add</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── SERVICE CREATOR DRAWER ──────────────────────────────────── -->
+<div class="service-drawer" id="serviceDrawer">
+    <div class="service-panel">
+        <div class="sc-header">
+            <div class="sc-header-left">
+                <div class="sc-header-icon">✦</div>
+                <div>
+                    <div class="sc-header-title">New Service</div>
+                    <div class="sc-header-sub">Add a custom package to your catalog</div>
+                </div>
+            </div>
+            <button class="sc-close-btn" onclick="closeServiceCreator()">✕</button>
+        </div>
+        <div class="service-body">
+            <div id="sc-toast" class="sc-toast" style="display:none"></div>
+            <div class="sc-row-2">
+                <div class="sc-field">
+                    <label class="sc-label">Service Name</label>
+                    <input type="text" id="serviceName" class="sc-input" placeholder="e.g. Reception Package">
+                </div>
+                <div class="sc-field sc-field-sm">
+                    <label class="sc-label">Price (₹)</label>
+                    <input type="number" id="servicePrice" class="sc-input" placeholder="45000">
+                </div>
+            </div>
+            <div class="sc-section">
+                <div class="sc-section-head">
+                    <span class="sc-section-title">Crew Members</span>
+                    <button type="button" class="sc-add-row-btn" onclick="addCrewRow()">＋ Add</button>
+                </div>
+                <div id="crewContainer" class="sc-crew-list"></div>
+            </div>
+            <div class="sc-section">
+                <div class="sc-section-head">
+                    <span class="sc-section-title">Deliverables</span>
+                </div>
+                <div id="deliverableList" class="sc-pills-grid"></div>
+                <div id="sc-custom-inline" class="sc-inline-add" style="display:none">
+                    <div style="display:flex;gap:8px;">
+                        <input type="text" id="sc-custom-input" class="sc-input" placeholder="e.g. Instagram Reels" style="flex:1">
+                        <input type="number" id="sc-custom-price" class="sc-input" placeholder="Extra ₹" style="width:100px;flex:none">
+                    </div>
+                    <div class="sc-inline-actions">
+                        <button type="button" class="sc-btn-ghost" onclick="cancelCustomDeliverable()">Cancel</button>
+                        <button type="button" class="sc-btn-primary-sm" onclick="confirmCustomDeliverable()">Add</button>
+                    </div>
+                </div>
+                <button type="button" id="sc-custom-trig" class="sc-add-row-btn sc-add-row-btn--outline" onclick="showCustomDeliverableInline()">
+                    ＋ Custom Deliverable
+                </button>
+            </div>
+        </div>
+        <div class="sc-footer">
+            <button class="sc-cancel-btn" onclick="closeServiceCreator()">Cancel</button>
+            <button class="sc-save-btn" onclick="saveService()">Save &amp; Add Package ✓</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── LEADS WRAPPER ───────────────────────────────────────────── -->
+<div class="leads-wrapper">
+
+    <div class="overview-header">
+
+        <!-- Filter Drawer -->
+        <div class="filter-drawer" id="filterDrawer">
+            <div class="filter-header">
+                <h3>Filters</h3>
+                <button class="close-filter" onclick="closeFilters()">×</button>
+            </div>
+            <div class="filter-body">
+                <div class="filter-section">
+                    <h4>Event Date</h4>
+                    <label><input type="radio" name="event_date" value="7"> Next 7 Days</label>
+                    <label><input type="radio" name="event_date" value="14"> Next 14 Days</label>
+                    <label><input type="radio" name="event_date" value="month"> This Month</label>
+                    <div class="range">
+                        <input type="date" id="event_from">
+                        <input type="date" id="event_to">
+                    </div>
+                </div>
+                <div class="filter-section">
+                    <h4>Follow-up</h4>
+                    <label><input type="checkbox" name="follow_up" value="today"> Today</label>
+                    <label><input type="checkbox" name="follow_up" value="week"> This Week</label>
+                    <label><input type="checkbox" name="follow_up" value="overdue"> Overdue</label>
+                </div>
+                <div class="filter-section">
+                    <h4>Status</h4>
+                    <label><input type="checkbox" value="NEW"> New</label>
+                    <label><input type="checkbox" value="FOLLOW_UP"> Follow Up</label>
+                    <label><input type="checkbox" value="ACCEPTED"> Accepted</label>
+                    <label><input type="checkbox" value="LOST"> Lost</label>
+                </div>
+                <div class="filter-section">
+                    <h4>Quoted Amount</h4>
+                    <label><input type="radio" name="amount" value="low"> Below ₹20,000</label>
+                    <label><input type="radio" name="amount" value="mid"> ₹20k – ₹50k</label>
+                    <label><input type="radio" name="amount" value="high"> Above ₹50k</label>
+                    <div class="range">
+                        <input type="number" placeholder="Min">
+                        <input type="number" placeholder="Max">
+                    </div>
+                </div>
+                <div class="filter-section">
+                    <h4>Payment</h4>
+                    <label><input type="checkbox"> Fully Paid</label>
+                    <label><input type="checkbox"> Partially Paid</label>
+                    <label><input type="checkbox"> Not Paid</label>
+                </div>
+                <div class="filter-section">
+                    <h4>Event Type</h4>
+                    <label><input type="checkbox"> Wedding</label>
+                    <label><input type="checkbox"> Reception</label>
+                    <label><input type="checkbox"> Baby Shower</label>
+                    <label><input type="checkbox"> Engagement</label>
+                </div>
+                <div class="filter-section">
+                    <h4>Priority</h4>
+                    <label class="urgent">🔴 Urgent</label>
+                    <label class="upcoming">🟡 Upcoming</label>
+                    <label class="safe">🟢 Safe</label>
+                </div>
+                <div class="filter-section">
+                    <h4>Search</h4>
+                    <input type="text" placeholder="Name / Phone / Email / Location">
+                </div>
+            </div>
+            <div class="filter-footer">
+                <button class="clear-btn" onclick="clearFilters()">Clear All</button>
+                <button class="apply-btn" onclick="applyFilters()">Apply Filters</button>
+            </div>
+        </div>
+
+        <div class="overview-left">
+            <h2>Leads Overview</h2>
+            <div class="stats">
+                <div><span>Total Leads</span><strong>{{ total_leads }}</strong></div>
+                <div><span>Total Amount</span><strong>₹ {{ total_amount }}</strong></div>
+                <div><span>Accepted Amount</span><strong>₹ {{ accepted_amount }}</strong></div>
+                <div><span>Lost Amount</span><strong>₹ {{ lost_quoted_amount }}</strong></div>
+            </div>
+        </div>
+        <div class="overview-search">
+            <div class="search-wrapper">
+                <i class="fa fa-search search-icon"></i>
+                <input type="text" id="globalSearch" placeholder="Search name / phone / email / location">
+                <span class="clear-search" id="clearSearch">×</span>
+            </div>
+        </div>
+        <div class="overview-right">
+            <button class="new-btn" onclick="openLeadForm()">+ NEW LEADS</button>
+            <button class="filter-btn">
+                <img src="{% static 'images/bx_filter.png' %}" class="filterimg"> <span>Filters</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- KANBAN BOARD -->
+    <div class="kanban">
+        <div class="column" data-status="NEW">
+            <div class="column-head new"><span class="label">● NEW </span><span class="count">{{ new_leads|length }}</span></div>
+            {% for lead in new_leads %}
+            <div class="card" draggable="true" data-id="{{ lead.id }}">
+                <div class="card-title">
+                    {{ lead.client_name }}
+                    <button class="edit-btn" onclick="openEditLead({{ lead.id }})" title="Edit Lead"><i class="fa-solid fa-pen-to-square"></i></button>
+                </div>
+                <hr>
+                <div class="card-row"><img src="{% static 'images/event.svg' %}"><span>{{ lead.event_type }}</span></div>
+                <div class="card-row"><img src="{% static 'images/calender.svg' %}"><span>{{ lead.event_start_date }} {{ lead.event_start_session }} – {{ lead.event_end_date }} {{ lead.event_end_session }}</span></div>
+                {% if lead.follow_up_date %}<div class="card-row"><img src="{% static 'images/follow.svg' %}"><span>{{ lead.follow_up_date }}</span><small>Due</small></div>{% endif %}
+                {% if lead.total_amount %}<div class="card-row"><img src="{% static 'images/rupee1.svg' %}"><span> Quoted : ₹ {{ lead.total_amount }}</span></div>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="column" data-status="FOLLOW_UP">
+            <div class="column-head follow"><span class="label">● FOLLOW UP</span><span class="count">{{ follow_up|length }}</span></div>
+            {% for lead in follow_up %}
+            <div class="card" draggable="true" data-id="{{ lead.id }}">
+                <div class="card-title">
+                    {{ lead.client_name }}
+                    <button class="edit-btn" onclick="openEditLead({{ lead.id }})" title="Edit Lead"><i class="fa-solid fa-pen-to-square"></i></button>
+                </div>
+                <hr>
+                <div class="card-row"><img src="{% static 'images/event.svg' %}"><span>{{ lead.event_type }}</span></div>
+                <div class="card-row"><img src="{% static 'images/calender.svg' %}"><span>{{ lead.event_start_date }} {{ lead.event_start_session }} – {{ lead.event_end_date }} {{ lead.event_end_session }}</span></div>
+                {% if lead.follow_up_date %}<div class="card-row danger"><img src="{% static 'images/follow.svg' %}"><span>{{ lead.follow_up_date }}</span><small>Due</small></div>{% endif %}
+                {% if lead.total_amount %}<div class="card-row"><img src="{% static 'images/rupee1.svg' %}"><span> Quoted : ₹ {{ lead.total_amount }}</span></div>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="column" data-status="ACCEPTED">
+            <div class="column-head accepted"><span class="label">● ACCEPTED</span><span class="count">{{ accepted|length }}</span></div>
+            {% for lead in accepted %}
+            <div class="card" draggable="true" data-id="{{ lead.id }}">
+                <div class="card-title">
+                    {{ lead.client_name }}
+                   
+                </div>
+                <hr>
+                <div class="card-row"><img src="{% static 'images/event.svg' %}"><span>{{ lead.event_type }}</span></div>
+                <div class="card-row"><img src="{% static 'images/calender.svg' %}"><span>{{ lead.event_start_date }} {{ lead.event_start_session }} – {{ lead.event_end_date }} {{ lead.event_end_session }}</span></div>
+                {% if lead.total_amount %}<div class="card-row"><img src="{% static 'images/rupee1.svg' %}"><span> Quoted : ₹ {{ lead.total_amount }}</span></div>{% endif %}
+                {% if lead.paid_amount %}<div class="card-row"><img src="{% static 'images/rupee1.svg' %}"><span>Paid : ₹ {{ lead.paid_amount }}</span></div>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="column" data-status="LOST">
+            <div class="column-head lost"><span class="label">● LOST</span><span class="count">{{ lost|length }}</span></div>
+            {% for lead in lost %}
+            <div class="card" draggable="true" data-id="{{ lead.id }}">
+                <div class="card-title">{{ lead.client_name }}</div>
+                <hr>
+                <div class="card-row"><img src="{% static 'images/event.svg' %}"><span>{{ lead.event_type }}</span></div>
+                <div class="card-row"><img src="{% static 'images/calender.svg' %}"><span>{{ lead.event_start_date }} {{ lead.event_start_session }} – {{ lead.event_end_date }} {{ lead.event_end_session }}</span></div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- ── NEW LEAD MODAL ───────────────────────────────────────────── -->
+<div class="lead-modal" id="leadModal">
+    <div class="lead-form">
+        <button class="close-btn" onclick="closeLeadForm()">×</button>
+        <div class="form-toast" id="formToast"></div>
+        <div class="progress-wrapper">
+            <div class="progress-line"></div>
+            <div class="progress-step active"><span>1</span><p>Client</p></div>
+            <div class="progress-step"><span>2</span><p>Event</p></div>
+        </div>
+        <form id="leadForm">
+            {% csrf_token %}
+            <input type="hidden" name="lead_id" id="lead_id">
+
+            <!-- STEP 1: Client Details -->
+            <div class="form-step active">
+                <h3>Client Details</h3>
+                <input type="text" name="client_name" placeholder="Client Name" required>
+                <input type="text" name="phone" placeholder="Phone Number" required>
+                <input type="email" name="email" placeholder="Email">
+                <button type="button" onclick="nextStep()">Next</button>
+            </div>
+
+            <!-- STEP 2: Event Details -->
+            <div class="form-scroll">
+                <div class="form-step">
+                    <h3>Event Details</h3>
+
+                    <!-- Package selector -->
+                    <div class="field-group">
+                        <label>Package Details</label>
+                        <div class="field-group">
+                            <label>Event Packages</label>
+                            <div id="pkgSummaryBar" class="pkg-summary-bar" style="display:none"></div>
+                            <div id="packageGrid" class="package-grid"></div>
+                            <div class="package-actions">
+                                <button type="button" onclick="openServiceCreator()" class="add-service-btn">+ Add New Service</button>
+                                <button type="button" id="editPkgBtn" onclick="openPackageEditor()" class="edit-package-btn" disabled>Edit Packages</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hidden deliverables box (legacy) -->
+                    <div class="field-group" style="display:none">
+                        <label>Quotation &amp; Deliverables</label>
+                        <div id="deliverablesBox" class="deliverables-box">
+                            <p class="muted">Select a package to view deliverables</p>
+                        </div>
+                        <button type="button" class="add-deliverable-btn" onclick="openDeliverableModal()">+ Add Deliverable</button>
+                    </div>
+
+                    <input type="text" name="event_type" placeholder="Event Type (Wedding, Reception, Baby Shower)" required>
+
+                    <div class="field-group">
+                        <label>Event Start</label>
+                        <div class="row">
+                            <input type="date" name="event_start_date" required>
+                            <select name="event_start_session" required>
+                                <option value="">Session</option>
+                                <option value="Morning">Morning</option>
+                                <option value="Evening">Evening</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Event End</label>
+                        <div class="row">
+                            <input type="date" name="event_end_date" required>
+                            <select name="event_end_session" required>
+                                <option value="">Session</option>
+                                <option value="Morning">Morning</option>
+                                <option value="Evening">Evening</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Total / Quoted Amount</label>
+                        <input type="number" name="total_amount" placeholder="Quoted amount (₹)" min="0" required>
+                    </div>
+
+                    <!-- ════════════════════════════════════════════════════════
+                         PRICING SUMMARY WIDGET
+                         Appears automatically when a package is selected.
+                         Shows: Sub Total → Discount row → GST row → Final Total
+                         Has "Add Discount" and "Add GST / Tax" buttons that
+                         open the popups below.
+                         ════════════════════════════════════════════════════════ -->
+                    <div id="pricingSummaryWrap" style="display:none"></div>
+
+                    <div class="field-group">
+                        <label>Follow-up Date</label>
+                        <input type="date" name="follow_up_date">
+                    </div>
+
+                    <input type="text" name="event_location" placeholder="Event Location" required>
+
+                    <div class="form-actions">
+                        <button type="button" onclick="prevStep()">Back</button>
+                        <button type="submit">Create Lead</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── PAYMENT MODAL ────────────────────────────────────────────── -->
+<!-- <div class="modal" id="paymentModal">
+    <div class="modal-content payment-box">
+        <div class="payment-header">
+            <h3>Advance Payment</h3>
+            <button class="close-btn" onclick="closePaymentModal()">×</button>
+        </div>
+        <div class="form-toast" id="paymentToast"></div>
+        <p class="payment-info">Enter the <strong>quoted amount</strong> and any <strong>advance paid</strong> by the client.</p>
+        <div class="field-group">
+            <label>Total / Quoted Amount (₹)</label>
+            <input type="number" id="totalAmount" placeholder="Eg: 50000">
+        </div>
+        <div class="field-group">
+            <label>Advance Paid (₹) <span>(optional)</span></label>
+            <input type="number" id="paidAmount" placeholder="Eg: 10000">
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeModal()">Ignore</button>
+            <button class="btn-primary" onclick="submitPayment()">Save &amp; Accept</button>
+        </div>
+    </div>
+</div> -->
+
+<!-- ── PKG EDIT PANEL ────────────────────────────────────────────── -->
+<div id="pkgEditOverlay" class="pkg-edit-overlay" onclick="closePkgEditPanel()"></div>
+<div id="pkgEditPanel" class="pkg-edit-panel">
+    <div class="pkg-ep-header">
+        <div class="pkg-ep-header-top">
+            <div class="pkg-ep-icon">📸</div>
+            <div>
+                <div class="pkg-ep-title">Edit Selected Packages</div>
+                <div class="pkg-ep-subtitle">Customize crew &amp; deliverables for each package</div>
+            </div>
+            <button type="button" class="pkg-ep-close" onclick="closePkgEditPanel()">✕</button>
+        </div>
+        <div class="pkg-ep-tabs" id="pkgEditTabs"></div>
+    </div>
+    <div class="pkg-ep-body" id="pkgEditBody"></div>
+    <div class="pkg-ep-footer">
+        <div class="pkg-ep-total-preview">Combined Total<strong id="pkgEditFooterTotal">₹0</strong></div>
+        <button type="button" class="pkg-ep-cancel" onclick="closePkgEditPanel()">Cancel</button>
+        <button type="button" class="pkg-ep-save" onclick="savePkgEditPanel()">Save Changes ✓</button>
+    </div>
+</div>
+
+<!-- ── LEAD SUCCESS MODAL ────────────────────────────────────────── -->
+<div class="lead-success-modal" id="leadSuccessModal">
+    <div class="lsm-backdrop" onclick="closeLeadSuccessModal()"></div>
+    <div class="lsm-card">
+        <div class="lsm-confetti">
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+        </div>
+        <div class="lsm-icon-wrap">
+            <div class="lsm-icon-ring lsm-ring-1"></div>
+            <div class="lsm-icon-ring lsm-ring-2"></div>
+            <div class="lsm-check-icon success-check-icon">
+                <svg viewBox="0 0 52 52" fill="none">
+                    <circle cx="26" cy="26" r="25" stroke="currentColor" stroke-width="2"/>
+                    <path class="lsm-checkmark" d="M14 27l8 8 16-16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+        </div>
+        <div class="lsm-title">Lead Created!</div>
+        <div class="lsm-sub">Quotation generated for <strong id="successClientName">Client</strong></div>
+        <div class="lsm-divider"></div>
+        <div class="lsm-actions">
+            <button class="lsm-btn lsm-btn-share" onclick="shareQuotation()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/>
+                </svg>
+                Share Quotation
+            </button>
+            <button class="lsm-btn lsm-btn-download" onclick="downloadQuotation()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download Quotation
+            </button>
+        </div>
+        <button class="lsm-close" onclick="closeLeadSuccessModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
+    </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     DISCOUNT POPUP
+     Triggered by: openDiscountPopup()
+     Supports: Percentage (%) or Flat (₹) discount
+     Shows live preview as admin types
+     ════════════════════════════════════════════════════════════════ -->
+<div class="pricing-popup" id="discountPopup" style="display:none">
+    <div class="pp-backdrop" onclick="closeDiscountPopup()"></div>
+    <div class="pp-card">
+
+        <div class="pp-header">
+            <div class="pp-header-icon pp-icon--green">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+                    <line x1="7" y1="7" x2="7.01" y2="7"/>
+                </svg>
+            </div>
+            <div>
+                <div class="pp-title">Add Discount</div>
+                <div class="pp-subtitle">Applied before GST calculation</div>
+            </div>
+            <button class="pp-close" onclick="closeDiscountPopup()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Percent / Flat toggle -->
+        <div class="pp-type-toggle">
+            <button type="button" class="dp-type dp-type--active" data-dtype="percent"
+                onclick="discountTypeToggle('percent')">
+                <span class="dp-type-icon">%</span>
+                Percentage
+            </button>
+            <button type="button" class="dp-type" data-dtype="flat"
+                onclick="discountTypeToggle('flat')">
+                <span class="dp-type-icon">₹</span>
+                Flat Amount
+            </button>
+        </div>
+
+        <!-- Value input -->
+        <div class="pp-field">
+            <label class="pp-label">Discount Value</label>
+            <div class="pp-input-wrap">
+                <span class="pp-input-prefix">%</span>
+                <input type="number" id="discountValueInput" class="pp-input"
+                    placeholder="e.g. 10" min="0"
+                    oninput="updateDiscountPreview()">
+            </div>
+            <!-- Live preview: e.g. "10% of ₹1,25,000 = −₹12,500" -->
+            <div class="pp-preview" id="discountPreview" style="display:none"></div>
+        </div>
+
+        <!-- Amount after discount -->
+        <div class="pp-after-total">
+            <span>Amount after discount</span>
+            <strong id="discountAfterTotal">—</strong>
+        </div>
+
+        <!-- Subtotal reference -->
+        <div class="pp-ref">Sub Total: ₹<span id="dpSubRef">0</span></div>
+
+        <div class="pp-footer">
+            <button type="button" class="pp-btn pp-btn--remove" onclick="removeDiscount()">Remove Discount</button>
+            <button type="button" class="pp-btn pp-btn--apply pp-btn--green" onclick="applyDiscount()">Apply Discount ✓</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     TAX / GST POPUP
+     Triggered by: openTaxPopup()
+     Standard slabs: 0%, 5%, 12%, 18%, 28% + custom %
+     GST is calculated on (subtotal − discount)
+     ════════════════════════════════════════════════════════════════ -->
+<div class="pricing-popup" id="taxPopup" style="display:none">
+    <div class="pp-backdrop" onclick="closeTaxPopup()"></div>
+    <div class="pp-card">
+
+        <div class="pp-header">
+            <div class="pp-header-icon pp-icon--blue">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2"/>
+                    <line x1="8" y1="21" x2="16" y2="21"/>
+                    <line x1="12" y1="17" x2="12" y2="21"/>
+                </svg>
+            </div>
+            <div>
+                <div class="pp-title">Add GST / Tax</div>
+                <div class="pp-subtitle">Applied on discounted amount</div>
+            </div>
+            <button class="pp-close" onclick="closeTaxPopup()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Standard GST slabs -->
+        <label class="pp-label">Standard GST Slabs</label>
+        <div class="gst-chips">
+            <button type="button" class="gst-chip" data-gst="0"  onclick="selectGstChip(0)">
+                0% <span>Exempt</span>
+            </button>
+            <button type="button" class="gst-chip" data-gst="5"  onclick="selectGstChip(5)">
+                5% <span>Basic</span>
+            </button>
+            <button type="button" class="gst-chip" data-gst="12" onclick="selectGstChip(12)">
+                12% <span>Standard</span>
+            </button>
+            <button type="button" class="gst-chip" data-gst="18" onclick="selectGstChip(18)">
+                18% <span>Regular</span>
+            </button>
+            <button type="button" class="gst-chip" data-gst="28" onclick="selectGstChip(28)">
+                28% <span>Luxury</span>
+            </button>
+        </div>
+
+        <!-- Custom rate input -->
+        <div class="pp-field" style="margin-top:16px">
+            <label class="pp-label">Custom Rate (%)</label>
+            <div class="pp-input-wrap">
+                <span class="pp-input-prefix">%</span>
+                <input type="number" id="gstCustomInput" class="pp-input"
+                    placeholder="Enter custom %" min="0" max="100"
+                    oninput="updateTaxPreview(); document.querySelectorAll('.gst-chip').forEach(b=>b.classList.remove('gst-chip--active'))">
+            </div>
+        </div>
+
+        <!-- Live preview: e.g. "18% on ₹1,12,500 = +₹20,250" -->
+        <div class="pp-preview" id="taxPreview" style="display:none"></div>
+
+        <!-- Total after GST -->
+        <div class="pp-after-total" style="margin-top:12px">
+            <span>Total after GST</span>
+            <strong id="taxFinalTotal">—</strong>
+        </div>
+
+        <div class="pp-footer">
+            <button type="button" class="pp-btn pp-btn--remove" onclick="removeGst()">Remove GST</button>
+            <button type="button" class="pp-btn pp-btn--apply pp-btn--blue" onclick="applyTax()">Apply GST ✓</button>
+        </div>
+    </div>
+</div>
+<!-- ═══════════════════════════════════════════════════════════════
+     LEAD ACCEPTANCE FLOW — ADD THESE MODALS TO leads.html
+     Place just before the closing </body> tag (after existing modals)
+     Also add: <script src="{% static 'js/lead_acceptance.js' %}"></script>
+     at the end (AFTER dragdrop.js)
+     ═══════════════════════════════════════════════════════════════ -->
+
+<!-- ── STEP 1: CONFIRM ACCEPT DIALOG ──────────────────────────── -->
+<div class="ac-confirm-overlay" id="acceptConfirmOverlay">
+    <div class="ac-backdrop" onclick="acConfirmNo()"></div>
+    <div class="ac-confirm-card">
+        <div class="ac-confirm-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+            </svg>
+        </div>
+        <div class="ac-confirm-title">Accept This Lead?</div>
+        <div class="ac-confirm-sub">
+            You are about to accept <strong id="acConfirmClientName">this lead</strong>.<br>
+            This will move it to the <strong>Accepted</strong> column.
+        </div>
+        <div class="ac-confirm-actions">
+            <button class="ac-btn ac-btn-no" onclick="acConfirmNo()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Cancel
+            </button>
+            <button class="ac-btn ac-btn-yes" onclick="acConfirmYes()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Yes, Accept
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ── STEP 2: FULL LEAD PREVIEW MODAL ───────────────────────── -->
+<div class="lpm-overlay" id="leadPreviewModal">
+    <div class="lpm-backdrop" onclick="lpClosePreview()"></div>
+    <div class="lpm-wrap">
+
+        <!-- HEADER -->
+        <div class="lpm-header">
+            <div class="lpm-header-left">
+                <div class="lpm-header-badge">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="lpm-header-title" id="lpHeaderTitle">Lead Preview</div>
+                    <div class="lpm-header-sub">Review all details before accepting</div>
+                </div>
+            </div>
+            <button class="lpm-close-btn" onclick="lpClosePreview()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <!-- SCROLL BODY -->
+        <div class="lpm-body">
+
+            <!-- ── CLIENT + EVENT INFO GRID ── -->
+            <div class="lpm-info-grid">
+                <div class="lpm-info-card">
+                    <div class="lpm-section-label">Client Details</div>
+                    <div class="lpm-info-row">
+                        <span class="lpm-info-key">Name</span>
+                        <span class="lpm-info-val" id="lpClientName">—</span>
+                    </div>
+                    <div class="lpm-info-row">
+                        <span class="lpm-info-key">Phone</span>
+                        <span class="lpm-info-val" id="lpPhone">—</span>
+                    </div>
+                    <div class="lpm-info-row">
+                        <span class="lpm-info-key">Email</span>
+                        <span class="lpm-info-val" id="lpEmail">—</span>
+                    </div>
+                </div>
+
+                <div class="lpm-info-card">
+                    <div class="lpm-section-label">Event Details</div>
+                    <div class="lpm-info-row">
+                        <span class="lpm-info-key">Type</span>
+                        <span class="lpm-info-val" id="lpEventType">—</span>
+                    </div>
+                    <div class="lpm-info-row">
+                        <span class="lpm-info-key">Dates</span>
+                        <span class="lpm-info-val" id="lpDates">—</span>
+                    </div>
+                    <div class="lpm-info-row" id="lpFollowupRow">
+                        <span class="lpm-info-key">Follow-up</span>
+                        <span class="lpm-info-val" id="lpFollowup">—</span>
+                    </div>
+                    <div class="lpm-info-row">
+                        <span class="lpm-info-key">Location</span>
+                        <span class="lpm-info-val" id="lpLocation">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── SERVICES TABLE ── -->
+            <div class="lpm-section">
+                <div class="lpm-section-label-big">
+                    <span>Services &amp; Packages</span>
+                    <div class="lpm-section-line"></div>
+                </div>
+                <div class="lpm-table-wrap">
+                    <table class="lpm-table">
+                        <colgroup>
+                            <col>
+                            <col style="width:54px">
+                            <col style="width:96px">
+                            <col style="width:96px">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>Package / Service</th>
+                                <th class="lpm-tc">Qty</th>
+                                <th class="lpm-tr">Rate</th>
+                                <th class="lpm-tr">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lpServicesTbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ── PRICING BREAKDOWN ── -->
+            <div class="lpm-pricing-strip">
+                <div class="lpm-pricing-row lpm-pr-sub">
+                    <span>Subtotal</span>
+                    <span id="lpSubtotal">₹0</span>
+                </div>
+                <div class="lpm-pricing-row lpm-pr-discount" id="lpDiscountRow">
+                    <span id="lpDiscountLabel">Discount</span>
+                    <span id="lpDiscountVal">—</span>
+                </div>
+                <div class="lpm-pricing-row lpm-pr-gst" id="lpGstRow">
+                    <span id="lpGstLabel">GST</span>
+                    <span id="lpGstVal">—</span>
+                </div>
+                <div class="lpm-pricing-divider"></div>
+                <div class="lpm-pricing-row lpm-pr-total">
+                    <span>Total Amount</span>
+                    <span id="lpTotalFinal">₹0</span>
+                </div>
+            </div>
+
+            <!-- ── PAYMENT STATUS CARD ── -->
+            <div class="lpm-payment-card">
+                <div class="lpm-section-label-big">
+                    <span>Payment Status</span>
+                    <div class="lpm-section-line"></div>
+                </div>
+
+                <div class="lpm-pay-stats">
+                    <div class="lpm-pay-stat">
+                        <span class="lpm-pay-label">Total</span>
+                        <span class="lpm-pay-val" id="lpPayTotal">₹0</span>
+                    </div>
+                    <div class="lpm-pay-stat">
+                        <span class="lpm-pay-label">Advance Paid</span>
+                        <span class="lpm-pay-val lpm-paid" id="lpPayPaid">₹0</span>
+                    </div>
+                    <div class="lpm-pay-stat">
+                        <span class="lpm-pay-label">Balance Due</span>
+                        <span class="lpm-pay-val lpm-due" id="lpPayRemaining">₹0</span>
+                    </div>
+                </div>
+
+                <div class="lpm-progress-wrap">
+                    <div class="lpm-progress-bar">
+                        <div class="lpm-progress-fill" id="lpPayProgressBar" style="width:0%"></div>
+                    </div>
+                    <span class="lpm-progress-pct" id="lpPayPct">0%</span>
+                </div>
+
+                <button class="lpm-make-pay-btn" onclick="lpOpenMakePayment()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                        <line x1="1" y1="10" x2="23" y2="10"/>
+                    </svg>
+                    Make Payment
+                </button>
+            </div>
+
+        </div><!-- end lpm-body -->
+
+        <!-- FOOTER ACTIONS -->
+        <div class="lpm-footer">
+            <button class="lpm-btn lpm-btn-edit" onclick="lpEditLead()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                Edit Lead
+            </button>
+            <button class="lpm-btn lpm-btn-invoice" onclick="lpGenerateInvoice()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                Generate Invoice PDF
+            </button>
+            <button class="lpm-btn lpm-btn-accept" onclick="lpAcceptLead()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Confirm &amp; Accept Lead
+            </button>
+        </div>
+
+    </div><!-- end lpm-wrap -->
+</div>
+
+
+<!-- ── MAKE PAYMENT POPUP ─────────────────────────────────────── -->
+<div class="lpmp-overlay" id="lpMakePaymentPopup" style="display:none">
+    <div class="lpmp-backdrop" onclick="lpCloseMakePayment()"></div>
+    <div class="lpmp-card">
+        <div class="lpmp-header">
+            <div class="lpmp-icon">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                    <line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+            </div>
+            <div>
+                <div class="lpmp-title">Record Payment</div>
+                <div class="lpmp-sub">Total: <strong id="lpMpTotalDisplay">₹0</strong></div>
+            </div>
+            <button class="lpmp-close" onclick="lpCloseMakePayment()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <div class="lpmp-toast" id="lpMpToast" style="display:none"></div>
+
+        <div class="lpmp-field">
+            <label class="lpmp-label">Advance / Paid Amount (₹)</label>
+            <div class="lpmp-input-wrap">
+                <span class="lpmp-prefix">₹</span>
+                <input type="number" id="lpMpPaidInput" class="lpmp-input"
+                    placeholder="Enter amount paid" min="0"
+                    oninput="lpMpLiveCalc()">
+            </div>
+            <div class="lpmp-live-preview" id="lpMpLivePreview" style="display:none"></div>
+        </div>
+
+        <div class="lpmp-footer">
+            <button class="lpmp-btn-cancel" onclick="lpCloseMakePayment()">Cancel</button>
+            <button class="lpmp-btn-save" onclick="lpSubmitPayment()">Save Payment</button>
+        </div>
+    </div>
+</div>
+
+
+<script src="{% static 'js/dragdrop.js' %}"></script>
+{% endblock %}

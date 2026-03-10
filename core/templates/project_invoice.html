@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Project Invoice{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/project_invoice.css' %}">
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+<!-- ================= FILTER DRAWER ================= -->
+<div id="filterDrawer" class="filter-drawer ">
+  <div class="filter-header">
+    <h3>Filters</h3>
+    <button onclick="closeFilters()">×</button>
+  </div>
+
+  <div class="filter-body">
+
+    <!-- 1️⃣ STATUS -->
+    <h4>Status</h4>
+    <label><input type="checkbox" value="PENDING" class="f-status"> Pending</label>
+    <label><input type="checkbox" value="COMPLETED" class="f-status"> Completed</label>
+
+    <!-- 2️⃣ CREATED DATE -->
+    <h4>Created Date</h4>
+    <input type="date" id="createdFrom">
+    <input type="date" id="createdTo">
+
+    <!-- 3️⃣ DUE DATE -->
+    <h4>Due Date</h4>
+    <select id="dueFilter">
+      <option value="">All</option>
+      <option value="today">Due Today</option>
+      <option value="overdue">Overdue</option>
+      <option value="next7">Next 7 Days</option>
+    </select>
+
+    <!-- 4️⃣ AMOUNT -->
+    <h4>Amount</h4>
+    <input type="number" id="minAmount" placeholder="Min ₹">
+    <input type="number" id="maxAmount" placeholder="Max ₹">
+
+    <!-- 5️⃣ PAYMENT STATE -->
+    <h4>Payment</h4>
+    <select id="paymentState">
+      <option value="">All</option>
+      <option value="full">Fully Paid</option>
+      <option value="partial">Partial</option>
+      <option value="none">Not Paid</option>
+    </select>
+
+    <!-- 6️⃣ CLIENT SEARCH -->
+    <h4>Client</h4>
+    <input type="text" id="clientSearch" placeholder="Search client">
+
+    <!-- 7️⃣ EVENT TYPE -->
+    <h4>Event Type</h4>
+    <label><input type="checkbox" value="wedding" class="f-event"> Wedding</label>
+    <label><input type="checkbox" value="engagement" class="f-event"> Engagement</label>
+
+    <!-- 8️⃣ SORT -->
+    <h4>Sort By</h4>
+    <select id="sortBy">
+      <option value="created_desc">Newest</option>
+      <option value="created_asc">Oldest</option>
+      <option value="amount_desc">Amount High → Low</option>
+      <option value="amount_asc">Amount Low → High</option>
+      <option value="due_asc">Due Date Nearest</option>
+    </select>
+
+    <!-- ACTIONS -->
+    <div class="filter-actions">
+      <button onclick="applyFilters()">Apply</button>
+      <button onclick="resetFilters()">Reset</button>
+    </div>
+
+  </div>
+</div>
+<!-- ================= HEADER ================= -->
+<section class="invoice-header">
+  <!-- LEFT SIDE -->
+  <div class="invoice-left">
+    <h1>Project Invoice</h1>
+
+    <div class="invoice-stats">
+      <div>
+        <span>Paid</span>
+        <strong>₹ {{ paid_amount|default:"0" }}</strong>
+      </div>
+      <div>
+        <span>Upcoming</span>
+        <strong>₹ {{ upcoming_amount|default:"0" }}</strong>
+      </div>
+      <div>
+        <span>Past Due</span>
+        <strong>₹ {{ past_due_amount|default:"0" }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT SIDE -->
+  <div class="invoice-actions">
+    <button id="newInvoiceBtn">+ NEW INVOICE</button>
+
+    <button class="filter-btn" onclick="openFilters()">
+      <svg width="1rem" height="1rem" viewBox="0 0 24 24" fill="none">
+        <path d="M3 5h18M6 12h12M10 19h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      </svg>
+      <span>Filters</span>
+    </button>
+  </div>
+</section>
+
+<div class="invoice-table">
+
+  <!-- PENDING -->
+  <div class="invoice-section pending">
+
+    <table>
+      <thead>
+        <tr>
+          <th>Project ID</th>
+          <th>Project Name</th>
+          <th>Amount</th>
+          <th>Due On</th>
+          <th>Created</th>
+          <th>Invoice Status</th>
+          <th></th>
+        </tr>
+      </thead>
+
+
+      <tbody>
+        <tr class="section-header-row">
+          <td colspan="7" class="section-header red">
+            ● PAYMENT PENDING
+          </td>
+        </tr>
+        {% for inv in pending_invoices %}
+        <tr class="invoice-row" data-status="{{ inv.status }}" data-created="{{ inv.created_at|date:'Y-m-d' }}"
+          data-due="{{ inv.due_date|date:'Y-m-d' }}" data-amount="{{ inv.total }}"
+          data-paid="{{ inv.project.lead.paid_amount|default:0 }}"
+          data-client="{{ inv.project.lead.client_name|lower }}" data-event="{{ inv.project.lead.event_type|lower }}">
+          
+
+          <td>AK-{{ inv.project.id }}</td>
+          <td> {{ inv.project.lead.client_name }}
+            ({{ inv.project.lead.event_type }})</td>
+          <td>₹ {{ inv.total }}</td>
+          <td>{{ inv.due_date|date:"M d, Y" }}</td>
+          <td>{{ inv.created_at|date:"M d, Y" }}</td>
+          <td>
+            <select class="status pending" onchange="updateInvoiceStatus({{ inv.id }}, this.value, this)">
+              <option value="PENDING" selected>Pending</option>
+              <option value="COMPLETED">Completed</option>
+            </select>
+          </td>
+          <td class="actions">
+            <i onclick="editInvoice({{ inv.id }})"> <img src="{% static 'images/download.png' %}"></i>
+            <i onclick="downloadInvoice({{ inv.id }})"><img src="{% static 'images/down.png' %}"></i>
+            <i onclick="shareInvoice({{ inv.id }})"><img src="{% static 'images/share.png' %}"></i>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- COMPLETED -->
+  <div class="invoice-section completed">
+
+
+    <table>
+      <thead>
+        <tr>
+          <th>Project ID</th>
+          <th>Project Name</th>
+          <th>Amount</th>
+          <th>Due On</th>
+          <th>Created</th>
+          <th>Invoice Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="section-header-row">
+          <td colspan="7" class="section-header green">
+            ● PAYMENT PENDING
+          </td>
+
+        </tr>
+        {% for inv in completed_invoices %}
+        <tr class="invoice-row" data-status="{{ inv.status }}" data-created="{{ inv.created_at|date:'Y-m-d' }}"
+          data-due="{{ inv.due_date|date:'Y-m-d' }}" data-amount="{{ inv.total }}"
+          data-paid="{{ inv.project.lead.paid_amount|default:0 }}"
+          data-client="{{ inv.project.lead.client_name|lower }}" data-event="{{ inv.project.lead.event_type|lower }}">
+          <td>AK-{{ inv.project.id }}</td>
+          <td> {{ inv.project.lead.client_name }}
+            ({{ inv.project.lead.event_type }})</td>
+          <td>₹ {{ inv.total }}</td>
+          <td>{{ inv.due_date|date:"M d, Y" }}</td>
+          <td>{{ inv.created_at|date:"M d, Y" }}</td>
+          <td>
+            <select class="status completed" onchange="updateInvoiceStatus({{ inv.id }}, this.value)">
+              <option value="PENDING">Pending</option>
+              <option value="COMPLETED" selected>Completed</option>
+            </select>
+          </td>
+          <td class="actions">
+            <i onclick="editInvoice({{ inv.id }})"> <img src="{% static 'images/download.png' %}"></i>
+            <i onclick="downloadInvoice({{ inv.id }})"><img src="{% static 'images/down.png' %}"></i>
+            <i onclick="shareInvoice({{ inv.id }})"><img src="{% static 'images/share.png' %}"></i>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+
+<!-- ================= BLUR OVERLAY ================= -->
+<div id="overlay" class="overlay hidden"></div>
+
+<!-- ================= POPUP ================= -->
+<div id="invoicePopup" class="invoice-popup hidden">
+  <button class="close-btn" id="closePopup">×</button>
+
+  <h2>Create a new Invoice</h2>
+
+  <label for="clientInput">Client</label>
+  <input type="text" id="clientInput" placeholder="Type a name or project ID" autocomplete="off" />
+
+  <p id="errorMsg" class="error-msg"></p>
+
+  <button id="nextBtn">NEXT</button>
+</div>
+<!-- ----bill to popup---->
+<!-- ================= INVOICE MODAL ================= -->
+<div id="invoiceModal" class="invoice-modal hidden">
+  <div class="invoice-card">
+
+    <!-- CLOSE -->
+    <button class="modal-close" onclick="closeInvoice()">×</button>
+
+    <!-- BILL TO -->
+    <div class="bill-row">
+      <div class="avatar">AK</div>
+      <div>
+        <h3 id="invClient">Client Name</h3>
+        <p id="invEmail">client@email.com</p>
+      </div>
+    </div>
+
+    <!-- SERVICES -->
+    <div class="invoice-section">
+      <h4>Services</h4>
+
+      <div id="serviceList"></div>
+
+      <button class="add-link" onclick="openAddItem()">＋ ADD ITEM</button>
+    </div>
+
+    <!-- TOTALS -->
+    <div class="totals-box">
+      <div><span>Subtotal</span><strong id="invSubtotal">₹0</strong></div>
+      <div><span>Pre Paid Amount</span><strong id="invAdvance">₹0</strong></div>
+      <div class="total">
+        <span>Total</span>
+        <strong id="invTotal">₹0</strong>
+      </div>
+    </div>
+
+    <!-- NOTES -->
+    <div class="invoice-section">
+      <h4>Notes</h4>
+      <textarea id="invNotes" placeholder="Thank you for business"></textarea>
+    </div>
+
+    <!-- DUE DATE -->
+    <div class="invoice-section">
+      <h4>Due Date</h4>
+      <input type="date" id="invDueDate">
+    </div>
+
+    <!-- ACTION -->
+    <button class="generate-btn big">GENERATE INVOICE</button>
+  </div>
+</div>
+<!-- ================= ADD ITEM MODAL ================= -->
+<div id="addItemModal" class="add-item-modal hidden">
+  <div class="add-item-card">
+    <button class="modal-close" onclick="closeAddItem()">×</button>
+
+    <h3>Add Extra Deliverable</h3>
+
+    <label>Deliverable Name</label>
+    <input id="addItemName" placeholder="Eg: Instagram Reels" />
+
+    <label>Quantity</label>
+    <input id="addItemQty" type="number" min="1" value="1" />
+
+    <label>Price (₹)</label>
+    <input id="addItemPrice" type="number" min="0" placeholder="Eg: 5000" />
+
+    <div class="add-item-actions">
+      <button class="btn-cancel" onclick="closeAddItem()">Cancel</button>
+      <button class="btn-add" onclick="confirmAddItem()">Add Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= GENERATED INVOICE PREVIEW ================= -->
+<div id="generatedInvoiceModal" class="generated-invoice-overlay hidden">
+  <div class="generated-invoice-wrapper">
+
+    <!-- CLOSE -->
+    <button class="gi-close" onclick="closeGeneratedInvoice()">×</button>
+
+    <!-- HEADER -->
+    <div class="gi-top">
+      <h2 id="giClientTitle">Client Name – INVOICE</h2>
+
+      <div class="gi-actions">
+        <span class="gi-code" id="giInvoiceCode">AK-000</span>
+        <button onclick="downloadInvoice()">Download Invoice</button>
+        <button onclick="shareInvoice()">Share Invoice</button>
+      </div>
+    </div>
+
+    <!-- PAPER -->
+    <div class="gi-paper" id="invoicePrintable">
+
+      <!-- BLACK BAR -->
+      <div class="gi-paper-head">
+        <img src="{% static 'images/logo.png' %}" alt="Logo">
+        <div>
+          <h3>INVOICE</h3>
+          <span id="giInvoiceNo">AK-000</span>
+        </div>
+      </div>
+
+      <!-- META -->
+      <div class="gi-meta">
+        <div>
+          <strong>Invoice To:</strong>
+          <p id="giClient"></p>
+          <p id="giEmail"></p>
+          <p id="giLocation"></p>
+        </div>
+
+        <div>
+          <p>Amount Paid: ₹ <span id="giPaid"></span></p>
+          <p>Total Due: ₹ <span id="giDue"></span></p>
+          <p>Due Date: <span id="giDueDate"></span></p>
+        </div>
+      </div>
+
+      <!-- TABLE -->
+      <table class="gi-table">
+        <thead>
+          <tr>
+            <th>Package Description</th>
+            <th>Charges</th>
+            <th>Hours</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="giTableBody"></tbody>
+      </table>
+
+      <!-- TOTAL -->
+      <div class="gi-grand">
+        GRAND TOTAL <span>₹ <strong id="giGrandTotal"></strong></span>
+      </div>
+
+      <!-- FOOTER -->
+      <div class="gi-footer">
+        <div>
+          <strong>Payable To:</strong>
+          <p>Your Name</p>
+          <p>youremail@gmail.com</p>
+          <p>Bank: 0000 1111 2222</p>
+        </div>
+        <div class="gi-thanks">Thank you!</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
+
+<script src="{% static 'js/project_invoice.js' %}"></script>
+{% endblock %}

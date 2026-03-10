@@ -1,0 +1,159 @@
+{% extends "teambase.html" %}
+{% load static %}
+{% block title %}Project Notifications{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/team_dashboard.css' %}">
+<div class="team-dashboard-top">
+
+    <!-- LEFT WELCOME CARD -->
+    <div class="welcome-card">
+        <div class="welcome-image">
+            <img src="{% static 'images/teamd.png' %}" />
+        </div>
+
+        <div class="welcome-content">
+            <h2>Hello {{ request.user.get_full_name|default:request.user.username }} !</h2>
+            <p>Have a Good day !</p>
+            <p>
+                You have {{ ongoing_count }} On-going projects and
+                {{ upcoming_count }} Upcoming projects..
+            </p>
+            <button class="review-btn">Review it</button>
+        </div>
+    </div>
+
+    <!-- RIGHT SECTION -->
+    <div class="dashboard-right">
+        <div class="stats-cards">
+
+            <div class="stat-card" onclick="goToProjects()">
+                <div class="stat-top">
+                    <span>On-Going Project</span>
+                    <div class="arrow-btn">↗</div>
+                </div>
+
+                <div class="stat-body">
+                    <h2>{{ ongoing_count }}</h2>
+                    <div class="mini-bars"></div>
+                </div>
+            </div>
+
+            <div class="stat-card" onclick="goToProjects()">
+                <div class="stat-top">
+                    <span>Upcoming Project</span>
+                    <div class="arrow-btn">↗</div>
+                </div>
+
+                <div class="stat-body">
+                    <h2>{{ upcoming_count }}</h2>
+                    <div class="mini-bars light"></div>
+                </div>
+            </div>
+
+            <div class="stat-card" onclick="goToProjects()">
+                <div class="stat-top">
+                    <span>Completed Project</span>
+                    <div class="arrow-btn">↗</div>
+                </div>
+
+                <div class="stat-body">
+                    <h2>{{ completed_count }}</h2>
+                    <div class="mini-bars"></div>
+                </div>
+            </div>
+
+        </div>
+        <!-- GRAPH -->
+        <div class="project-overview-card">
+            <div class="overview-header">
+                <h3>Project Overview</h3>
+
+                <select id="yearSelect">
+                    <option value="2026">2026</option>
+                    <option value="2025">2025</option>
+                </select>
+            </div>
+
+            <canvas id="projectChart"></canvas>
+        </div>
+
+    </div>
+</div>
+
+<div class="notification-page">
+
+    <!-- LEFT PANEL -->
+    <div class="notification-list">
+
+        <h3>Project Notifications</h3>
+
+        <div class="notification-header">
+            <span>Project ID</span>
+            <span>Project Name</span>
+            <span>Event Date</span>
+            <span>Due Date</span>
+            <span>Pending List</span>
+        </div>
+
+        {% for n in notifications %}
+        <div class="notification-row" data-id="{{ n.id }}">
+            <span>AK-{{ n.project.id }}</span>
+            <span>{{ n.project.lead.client_name }}({{ n.project.lead.event_type }})</span>
+            <span>
+                {{ n.project.lead.event_start_date }} –
+                {{ n.project.lead.event_end_date }}
+            </span>
+            <span>{{ n.project.lead.follow_up_date|default:"—" }}</span>
+            <span class="actions">
+                <button class="accept" onclick="acceptNotification({{ n.id }})">
+                    ✓ Accept
+                </button>
+                <button class="reject" onclick="rejectNotification({{ n.id }})">
+                    ✕ Reject
+                </button>
+            </span>
+        </div>
+        {% empty %}
+        <div class="empty">No pending notifications</div>
+        {% endfor %}
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="calendar-panel">
+
+        <!-- HEADER -->
+        <div class="calendar-header">
+            <h4 id="calendarTitle">March – 2026</h4>
+            <div class="calendar-nav">
+                <button id="prevMonth">‹</button>
+                <button id="nextMonth">›</button>
+            </div>
+        </div>
+
+        <!-- WEEK DAYS -->
+        <div class="calendar-week">
+            <span>S</span><span>M</span><span>T</span><span>W</span>
+            <span>T</span><span>F</span><span>S</span>
+        </div>
+
+        <!-- DATES -->
+        <div id="calendarGrid" class="calendar-grid"></div>
+
+        <!-- EVENT CARD -->
+        <div id="eventCard" class="event-card" style="display:none;">
+            <div class="event-date" id="eventDate"></div>
+
+            <div class="event-title" id="eventTitle"></div>
+            <div class="event-location" id="eventLocation"></div>
+
+            <div class="event-team" id="eventTeam"></div>
+        </div>
+
+    </div>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="{% static 'js/team_dashboard.js' %}"></script>
+{% endblock %}
