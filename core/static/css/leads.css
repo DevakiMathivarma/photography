@@ -5978,3 +5978,978 @@ input[name="total_amount"].pkg-auto-amount::placeholder {
     border-left: 2px solid #e5e7eb;
     margin: 2px 0;
 }
+/* ================================================================
+   PACKAGE DATE PICKER — per-package date + session rows
+   Appended to lead_acceptance.css (or leads.css)
+   ================================================================ */
+
+/* ── DATE CARDS CONTAINER (appears below summary bar) ── */
+.pkg-dates-wrap {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 10px;
+    animation: pkgDatesIn .28s cubic-bezier(.34,1.4,.64,1);
+}
+@keyframes pkgDatesIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── EACH PACKAGE DATE CARD ── */
+.pkg-date-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #fff;
+    border: 1.5px solid #ede8e1;
+    border-radius: 12px;
+    padding: 12px 14px 14px;
+    transition: border-color .18s, box-shadow .18s;
+    position: relative;
+}
+.pkg-date-row:focus-within {
+    border-color: #8B1A1A;
+    box-shadow: 0 0 0 3px rgba(139,26,26,.07);
+}
+.pkg-date-row.has-conflict {
+    border-color: #f59e0b;
+    background: #fffbf0;
+    box-shadow: 0 0 0 3px rgba(245,158,11,.08);
+}
+
+/* ── CARD HEADER: label + conflict dot ── */
+.pkg-date-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.pkg-date-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: #8B1A1A;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+}
+
+/* ── DATE INPUT ── */
+.pkg-date-input {
+    padding: 8px 11px;
+    border: 1.5px solid #e5e1da;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    color: #1a1a2e;
+    background: #faf8f5;
+    outline: none;
+    width: 100%;
+    transition: border-color .15s, background .15s;
+    cursor: pointer;
+}
+.pkg-date-input:focus {
+    border-color: #8B1A1A;
+    background: #fff;
+}
+.pkg-date-input:not([value=""]):valid {
+    background: #fff;
+}
+
+/* ── SESSION SELECT ── */
+.pkg-session-select {
+    padding: 8px 10px;
+    border: 1.5px solid #e5e1da;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-family: 'DM Sans', sans-serif;
+    color: #374151;
+    background: #faf8f5;
+    outline: none;
+    width: 100%;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238B1A1A' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+}
+.pkg-session-select:focus {
+    border-color: #8B1A1A;
+    background: #fff;
+}
+
+/* conflict indicator dot */
+.pkg-conflict-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f59e0b;
+    flex-shrink: 0;
+    animation: conflictPulse 1.4s ease-in-out infinite;
+}
+@keyframes conflictPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,.5); }
+    50%      { box-shadow: 0 0 0 5px rgba(245,158,11,0); }
+}
+.pkg-conflict-dot.hidden { visibility: hidden; }
+
+
+/* ================================================================
+   DATE CONFLICT ALERT POPUP
+   A stunning, animated popup — not a boring browser alert
+   ================================================================ */
+
+.dca-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .3s ease;
+}
+.dca-overlay.show {
+    pointer-events: all;
+    opacity: 1;
+}
+
+.dca-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(8, 6, 14, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.dca-card {
+    position: relative;
+    z-index: 1;
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 0;
+    max-width: 440px;
+    width: 100%;
+    box-shadow:
+        0 40px 100px rgba(10,6,20,.2),
+        0 0 0 1px rgba(245,158,11,.15);
+    transform: scale(0.88) translateY(20px);
+    opacity: 0;
+    transition: transform .42s cubic-bezier(.34,1.56,.64,1), opacity .3s ease;
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+}
+.dca-card.pop {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+/* amber top stripe */
+.dca-stripe {
+    height: 4px;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b);
+    background-size: 200% 100%;
+    animation: dcaStripe 2s linear infinite;
+}
+@keyframes dcaStripe {
+    0%   { background-position: 0% 0%; }
+    100% { background-position: 200% 0%; }
+}
+
+.dca-body {
+    padding: 28px 32px 24px;
+}
+
+/* icon circle */
+.dca-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    position: relative;
+}
+.dca-icon-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid rgba(245,158,11,.2);
+    animation: dcaRing 2s ease-in-out infinite;
+}
+.dca-icon-ring-1 { width: 70px; height: 70px; animation-delay: 0s; }
+.dca-icon-ring-2 { width: 88px; height: 88px; animation-delay: .35s; }
+@keyframes dcaRing {
+    0%,100% { transform: scale(1);   opacity: .5; }
+    50%      { transform: scale(1.1); opacity: .15; }
+}
+
+.dca-icon-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border: 2px solid rgba(245,158,11,.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+}
+.dca-icon-circle svg {
+    color: #d97706;
+}
+
+/* title */
+.dca-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 19px;
+    font-weight: 700;
+    color: #111827;
+    text-align: center;
+    margin-bottom: 6px;
+}
+.dca-sub {
+    font-size: 13px;
+    color: #6b7280;
+    text-align: center;
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+
+/* conflict cards */
+.dca-conflicts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 22px;
+    max-height: 160px;
+    overflow-y: auto;
+}
+.dca-conflict-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #fffbf0;
+    border: 1.5px solid rgba(245,158,11,.25);
+    border-radius: 10px;
+    padding: 10px 14px;
+    animation: dcaItemIn .3s cubic-bezier(.34,1.4,.64,1) both;
+}
+.dca-conflict-item:nth-child(1) { animation-delay: .05s; }
+.dca-conflict-item:nth-child(2) { animation-delay: .12s; }
+.dca-conflict-item:nth-child(3) { animation-delay: .19s; }
+@keyframes dcaItemIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+.dca-conflict-dot-lg {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #f59e0b;
+    flex-shrink: 0;
+}
+.dca-conflict-text {
+    flex: 1;
+}
+.dca-conflict-client {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1.2;
+}
+.dca-conflict-detail {
+    font-size: 11.5px;
+    color: #9ca3af;
+    margin-top: 2px;
+}
+
+/* footer buttons */
+.dca-footer {
+    display: flex;
+    gap: 10px;
+    padding-top: 14px;
+    border-top: 1px solid #f0ece6;
+}
+.dca-btn {
+    flex: 1;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    border: none;
+    transition: background .15s, transform .12s, box-shadow .15s;
+}
+.dca-btn:active { transform: scale(.97); }
+
+.dca-btn-change {
+    background: #f4f4f6;
+    color: #374151;
+    border: 1.5px solid #e5e7eb;
+}
+.dca-btn-change:hover { background: #eaeaec; }
+
+.dca-btn-proceed {
+    background: #8B1A1A;
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(139,26,26,.28);
+}
+.dca-btn-proceed:hover {
+    background: #731616;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(139,26,26,.35);
+}
+
+/* ── SMALL RESPONSIVE ── */
+@media (max-width: 480px) {
+    .pkg-dates-wrap {
+        grid-template-columns: 1fr;
+    }
+    .dca-card { border-radius: 16px; }
+    .dca-body { padding: 22px 20px 18px; }
+}
+/* ================================================================
+   PACKAGE DATE PICKER — per-package date + session rows
+   Appended to lead_acceptance.css (or leads.css)
+   ================================================================ */
+
+/* ── DATE CARDS CONTAINER (appears below summary bar) ── */
+.pkg-dates-wrap {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 10px;
+    animation: pkgDatesIn .28s cubic-bezier(.34,1.4,.64,1);
+}
+@keyframes pkgDatesIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── EACH PACKAGE DATE CARD ── */
+.pkg-date-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #fff;
+    border: 1.5px solid #ede8e1;
+    border-radius: 12px;
+    padding: 12px 14px 14px;
+    transition: border-color .18s, box-shadow .18s;
+    position: relative;
+}
+.pkg-date-row:focus-within {
+    border-color: #8B1A1A;
+    box-shadow: 0 0 0 3px rgba(139,26,26,.07);
+}
+.pkg-date-row.has-conflict {
+    border-color: #f59e0b;
+    background: #fffbf0;
+    box-shadow: 0 0 0 3px rgba(245,158,11,.08);
+}
+
+/* ── CARD HEADER: label + conflict dot ── */
+.pkg-date-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.pkg-date-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: #8B1A1A;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+}
+
+/* ── DATE INPUT ── */
+.pkg-date-input {
+    padding: 8px 11px;
+    border: 1.5px solid #e5e1da;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    color: #1a1a2e;
+    background: #faf8f5;
+    outline: none;
+    width: 100%;
+    transition: border-color .15s, background .15s;
+    cursor: pointer;
+}
+.pkg-date-input:focus {
+    border-color: #8B1A1A;
+    background: #fff;
+}
+.pkg-date-input:not([value=""]):valid {
+    background: #fff;
+}
+
+/* ── SESSION SELECT ── */
+.pkg-session-select {
+    padding: 8px 10px;
+    border: 1.5px solid #e5e1da;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-family: 'DM Sans', sans-serif;
+    color: #374151;
+    background: #faf8f5;
+    outline: none;
+    width: 100%;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238B1A1A' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+}
+.pkg-session-select:focus {
+    border-color: #8B1A1A;
+    background: #fff;
+}
+
+/* conflict indicator dot */
+.pkg-conflict-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f59e0b;
+    flex-shrink: 0;
+    animation: conflictPulse 1.4s ease-in-out infinite;
+}
+@keyframes conflictPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,.5); }
+    50%      { box-shadow: 0 0 0 5px rgba(245,158,11,0); }
+}
+.pkg-conflict-dot.hidden { visibility: hidden; }
+
+
+/* ================================================================
+   DATE CONFLICT ALERT POPUP
+   A stunning, animated popup — not a boring browser alert
+   ================================================================ */
+
+.dca-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .3s ease;
+}
+.dca-overlay.show {
+    pointer-events: all;
+    opacity: 1;
+}
+
+.dca-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(8, 6, 14, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.dca-card {
+    position: relative;
+    z-index: 1;
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 0;
+    max-width: 440px;
+    width: 100%;
+    box-shadow:
+        0 40px 100px rgba(10,6,20,.2),
+        0 0 0 1px rgba(245,158,11,.15);
+    transform: scale(0.88) translateY(20px);
+    opacity: 0;
+    transition: transform .42s cubic-bezier(.34,1.56,.64,1), opacity .3s ease;
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+}
+.dca-card.pop {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+/* amber top stripe */
+.dca-stripe {
+    height: 4px;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b);
+    background-size: 200% 100%;
+    animation: dcaStripe 2s linear infinite;
+}
+@keyframes dcaStripe {
+    0%   { background-position: 0% 0%; }
+    100% { background-position: 200% 0%; }
+}
+
+.dca-body {
+    padding: 28px 32px 24px;
+}
+
+/* icon circle */
+.dca-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    position: relative;
+}
+.dca-icon-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid rgba(245,158,11,.2);
+    animation: dcaRing 2s ease-in-out infinite;
+}
+.dca-icon-ring-1 { width: 70px; height: 70px; animation-delay: 0s; }
+.dca-icon-ring-2 { width: 88px; height: 88px; animation-delay: .35s; }
+@keyframes dcaRing {
+    0%,100% { transform: scale(1);   opacity: .5; }
+    50%      { transform: scale(1.1); opacity: .15; }
+}
+
+.dca-icon-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border: 2px solid rgba(245,158,11,.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+}
+.dca-icon-circle svg {
+    color: #d97706;
+}
+
+/* title */
+.dca-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 19px;
+    font-weight: 700;
+    color: #111827;
+    text-align: center;
+    margin-bottom: 6px;
+}
+.dca-sub {
+    font-size: 13px;
+    color: #6b7280;
+    text-align: center;
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+
+/* conflict cards */
+.dca-conflicts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 22px;
+    max-height: 160px;
+    overflow-y: auto;
+}
+.dca-conflict-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #fffbf0;
+    border: 1.5px solid rgba(245,158,11,.25);
+    border-radius: 10px;
+    padding: 10px 14px;
+    animation: dcaItemIn .3s cubic-bezier(.34,1.4,.64,1) both;
+}
+.dca-conflict-item:nth-child(1) { animation-delay: .05s; }
+.dca-conflict-item:nth-child(2) { animation-delay: .12s; }
+.dca-conflict-item:nth-child(3) { animation-delay: .19s; }
+@keyframes dcaItemIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+.dca-conflict-dot-lg {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #f59e0b;
+    flex-shrink: 0;
+}
+.dca-conflict-text {
+    flex: 1;
+}
+.dca-conflict-client {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1.2;
+}
+.dca-conflict-detail {
+    font-size: 11.5px;
+    color: #9ca3af;
+    margin-top: 2px;
+}
+
+/* footer buttons */
+.dca-footer {
+    display: flex;
+    gap: 10px;
+    padding-top: 14px;
+    border-top: 1px solid #f0ece6;
+}
+.dca-btn {
+    flex: 1;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    border: none;
+    transition: background .15s, transform .12s, box-shadow .15s;
+}
+.dca-btn:active { transform: scale(.97); }
+
+.dca-btn-change {
+    background: #f4f4f6;
+    color: #374151;
+    border: 1.5px solid #e5e7eb;
+}
+.dca-btn-change:hover { background: #eaeaec; }
+
+.dca-btn-proceed {
+    background: #8B1A1A;
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(139,26,26,.28);
+}
+.dca-btn-proceed:hover {
+    background: #731616;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(139,26,26,.35);
+}
+
+/* ── SMALL RESPONSIVE ── */
+@media (max-width: 480px) {
+    .pkg-dates-wrap {
+        grid-template-columns: 1fr;
+    }
+    .dca-card { border-radius: 16px; }
+    .dca-body { padding: 22px 20px 18px; }
+}
+
+/* ================================================================
+   TBD (Date Not Yet Finalized) STATE
+   ================================================================ */
+
+/* card head right side: conflict dot + TBD toggle grouped */
+.pkg-date-head-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* TBD toggle — checkbox + label pill */
+.pkg-tbd-toggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    user-select: none;
+}
+.pkg-tbd-check {
+    display: none; /* hidden — toggled via label click */
+}
+.pkg-tbd-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .7px;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 20px;
+    background: #f3f4f6;
+    color: #9ca3af;
+    border: 1.5px solid #e5e7eb;
+    transition: background .15s, color .15s, border-color .15s;
+    line-height: 1.5;
+}
+.pkg-tbd-check:checked + .pkg-tbd-label {
+    background: #fff7ed;
+    color: #b45309;
+    border-color: #fde68a;
+}
+
+/* TBD card state */
+.pkg-date-row.pkg-date-tbd {
+    border-color: #fde68a;
+    background: #fffbf0;
+    box-shadow: none;
+}
+.pkg-date-row.pkg-date-tbd .pkg-date-label {
+    color: #b45309;
+}
+
+/* inputs wrapper — animated show/hide */
+.pkg-date-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: opacity .18s ease;
+}
+
+/* TBD placeholder shown instead of inputs */
+.pkg-tbd-placeholder {
+    display: none;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: #b45309;
+    font-style: italic;
+    padding: 7px 4px 4px;
+    opacity: 0;
+    transition: opacity .18s ease;
+}
+.pkg-tbd-placeholder[style*="display: flex"],
+.pkg-tbd-placeholder[style*="display:flex"] {
+    opacity: 1;
+}
+
+/* All-TBD soft notice banner */
+.pkg-tbd-all-notice {
+    margin-top: 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    background: #fffbf0;
+    border: 1.5px solid #fde68a;
+    border-radius: 10px;
+    padding: 11px 14px;
+    font-size: 12.5px;
+    color: #92400e;
+    line-height: 1.55;
+    animation: tbdNoticeIn .3s cubic-bezier(.34,1.4,.64,1);
+    transition: opacity .4s ease;
+}
+.pkg-tbd-all-notice svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: #d97706;
+}
+@keyframes tbdNoticeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+/* ================================================================
+   CARD DATE POPUP
+   Add this to leads.css
+   ================================================================ */
+
+/* ── Clickable date row on card ─────────────────────────────────── */
+.card-date-trigger {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    user-select: none;
+}
+
+.card-date-trigger .cdt-main {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 12.5px;
+}
+
+.card-date-trigger .cdt-chevron {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    opacity: 0.45;
+    transition: opacity 0.15s, transform 0.2s ease;
+    color: #8B1A1A;
+}
+
+.card-date-trigger:hover .cdt-chevron {
+    opacity: 0.85;
+    transform: translateY(1px);
+}
+
+.card-date-trigger.open .cdt-chevron {
+    transform: rotate(180deg);
+    opacity: 0.9;
+}
+
+/* ── The popup itself ───────────────────────────────────────────── */
+.card-dates-popup {
+    position: fixed;
+    z-index: 9999;
+    background: #ffffff;
+    border: 1px solid rgba(139, 26, 26, 0.13);
+    border-radius: 12px;
+    box-shadow:
+        0 4px 6px -1px rgba(0,0,0,0.07),
+        0 10px 24px -4px rgba(139,26,26,0.12),
+        0 0 0 1px rgba(139,26,26,0.04);
+    padding: 10px 0;
+    min-width: 220px;
+    max-width: 280px;
+    pointer-events: auto;
+
+    /* entrance animation */
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+    transition: opacity 0.18s ease, transform 0.2s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.card-dates-popup.cdp-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+/* ── Popup header ───────────────────────────────────────────────── */
+.cdp-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 14px 10px;
+    border-bottom: 1px solid #f0ebe6;
+    margin-bottom: 4px;
+}
+
+.cdp-header-icon {
+    width: 22px;
+    height: 22px;
+    background: linear-gradient(135deg, #8B1A1A, #c0392b);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cdp-header-icon svg {
+    width: 11px;
+    height: 11px;
+    stroke: white;
+}
+
+.cdp-header-text {
+    font-size: 11px;
+    font-weight: 700;
+    color: #1a1a2e;
+    letter-spacing: 0.3px;
+}
+
+.cdp-header-sub {
+    font-size: 10px;
+    color: #9ca3af;
+    margin-top: 1px;
+}
+
+/* ── Each event row in popup ────────────────────────────────────── */
+.cdp-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 8px 14px;
+    transition: background 0.12s;
+}
+
+.cdp-row:hover {
+    background: #fdf8f6;
+}
+
+.cdp-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #8B1A1A;
+    flex-shrink: 0;
+    margin-top: 4px;
+}
+
+.cdp-dot.cdp-dot--tbd {
+    background: #d97706;
+}
+
+.cdp-row-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.cdp-pkg-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 2px;
+}
+
+.cdp-date-val {
+    font-size: 11.5px;
+    color: #374151;
+}
+
+.cdp-tbd-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid rgba(217, 119, 6, 0.25);
+    border-radius: 20px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.cdp-session-pill {
+    display: inline-block;
+    background: #f8ece8;
+    color: #8B1A1A;
+    border-radius: 20px;
+    padding: 1px 7px;
+    font-size: 10px;
+    font-weight: 600;
+    margin-left: 5px;
+    vertical-align: middle;
+}
+
+/* ── No dates notice ────────────────────────────────────────────── */
+.cdp-empty {
+    padding: 10px 14px;
+    font-size: 11.5px;
+    color: #9ca3af;
+    text-align: center;
+}
+
+/* ── Arrow pointing up to trigger ───────────────────────────────── */
+.cdp-arrow {
+    position: absolute;
+    top: -6px;
+    left: 20px;
+    width: 11px;
+    height: 11px;
+    background: white;
+    border-left: 1px solid rgba(139,26,26,0.12);
+    border-top: 1px solid rgba(139,26,26,0.12);
+    transform: rotate(45deg);
+    border-radius: 2px 0 0 0;
+}

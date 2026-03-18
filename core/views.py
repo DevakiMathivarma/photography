@@ -292,6 +292,9 @@ def leads_view(request):
     follow_up_leads = leads.filter(status="FOLLOW_UP").order_by('position')
     accepted_leads = leads.filter(status="ACCEPTED").order_by('position')
     lost_leads = leads.filter(status="LOST").order_by('position')
+    import json
+    for lead in list(new_leads) + list(follow_up_leads) + list(accepted_leads) + list(lost_leads):
+        lead.selected_services_json = json.dumps(lead.selected_services or [])
 
     # =====================================================
     # CONTEXT
@@ -436,20 +439,21 @@ def get_lead(request, lead_id):
     lead = Lead.objects.get(id=lead_id)
 
     return JsonResponse({
-        "id": lead.id,
-        "client_name": lead.client_name,
-        "phone": lead.phone,
-        "email": lead.email,
-        "event_type": lead.event_type,
-        "event_start_date": lead.event_start_date,
-        "event_start_session": lead.event_start_session,
-        "event_end_date": lead.event_end_date,
-        "event_end_session": lead.event_end_session,
-        "follow_up_date": lead.follow_up_date,
-        "event_location": lead.event_location,
-        "total_amount": lead.total_amount,
-        "selected_services": lead.selected_services or [],
-        "pricing_data": lead.pricing_data or {}
+       'id':                  lead.id,
+        'client_name':         lead.client_name,
+        'phone':               lead.phone,
+        'email':               lead.email,
+        'event_type':          lead.event_type,
+        'event_start_date':    str(lead.event_start_date)   if lead.event_start_date  else None,
+        'event_start_session': lead.event_start_session,
+        'event_end_date':      str(lead.event_end_date)     if lead.event_end_date    else None,
+        'event_end_session':   lead.event_end_session,
+        'follow_up_date':      str(lead.follow_up_date)     if lead.follow_up_date    else None,
+        'event_location':      lead.event_location,
+        'total_amount':        float(lead.total_amount)     if lead.total_amount      else 0,
+        'paid_amount':         float(lead.paid_amount)      if lead.paid_amount       else 0,
+        'selected_services':   lead.selected_services       or [],
+        'pricing_data':        lead.pricing_data            or {},
     })
 
 # automatic moving from new to column
@@ -1090,54 +1094,108 @@ def delete_project_task(request):
 
 
 
-# core/views/sessions.py
+# ================================================================
+# REPLACE your sessions_view in views.py with this
+# ================================================================
+
 from django.shortcuts import render
 from django.utils.timezone import now
 from collections import defaultdict
-from core.models import Project
+from core.models import Project, Lead
+import json
+
+
+# Role full name → short code map
+ROLE_SHORT = {
+    "Traditional Photographer":  "TP",
+    "Candid Photographer":       "CP",
+    "Traditional Videographer":  "TV",
+    "Candid Videographer":       "CV",
+    "Cinematic Videographer":    "CI",
+    "Drone Operator":            "DR",
+    "Photographer":              "PH",
+    "Videographer":              "VG",
+    # already codes pass through
+    "TP": "TP", "CP": "CP", "TV": "TV", "CV": "CV",
+    "CI": "CI", "DR": "DR", "PH": "PH", "VG": "VG",
+}
+
+def _short_role(raw):
+    return ROLE_SHORT.get(raw.strip(), raw.strip()[:2].upper()) if raw else "?"
+
+
+def _attach_role_slots(projects):
+    """
+    For each project, attach p.lead.role_slots_display — a flat list of
+    { code, label } dicts, one per teamRole across all packages.
+    Used in the template to render crew-slot circles with short codes.
+    """
+    for p in projects:
+        if not p.lead:
+            continue
+        slots = []
+        for svc in (p.lead.selected_services or []):
+            for role in (svc.get("teamRoles") or []):
+                code = _short_role(role)
+                slots.append({"code": code, "label": role})
+        p.lead.role_slots_display = slots
+    return projects
+
 
 def sessions_view(request):
-    today = now().date()
-    current_year = today.year
+    today         = now().date()
+    current_year  = today.year
     current_month = today.month
 
-    tab = request.GET.get("tab")  # no default → no active tab initially
+    tab = request.GET.get("tab")
 
+    # ── TBD TAB ───────────────────────────────────────────────────
+    if tab == "tbd":
+        tbd_leads = []
+        all_leads = Lead.objects.filter(
+            status__in=["NEW", "FOLLOW_UP", "ACCEPTED"]
+        ).order_by("client_name")
+
+        for lead in all_leads:
+            services = lead.selected_services or []
+            tbd_services = [
+                svc for svc in services
+                if svc.get("dateTBD") is True or svc.get("dateTBD") == "true"
+            ]
+            if tbd_services:
+                lead.tbd_services = tbd_services
+                tbd_leads.append(lead)
+
+        return render(request, "sessions.html", {
+            "grouped_projects": {},
+            "active_tab": tab,
+            "tbd_leads": tbd_leads,
+        })
+
+    # ── NORMAL TABS ───────────────────────────────────────────────
     projects = Project.objects.select_related("lead").prefetch_related(
         "tasks",
-        "team_assignments__member__user"
+        "team_assignments__member__user",
+        "crew_assignments__crew_member",
     )
 
-    # 🔥 STRICT MONTH-BASED FILTERING (FIXED)
     if tab == "upcoming":
-        # ONLY current month
+        from datetime import date
+        month_start = date(current_year, current_month, 1)
         projects = projects.filter(
-            lead__event_start_date__year=current_year,
-            lead__event_start_date__month=current_month
-        )
+            lead__event_start_date__gte=month_start
+        ).order_by("lead__event_start_date")
 
     elif tab == "past":
-        # ANY month BEFORE current month (same year OR previous years)
+        from datetime import date
+        month_start = date(current_year, current_month, 1)
         projects = projects.filter(
-            lead__event_start_date__lt=now().date().replace(
-                year=current_year,
-                month=current_month,
-                day=1
-            )
-        )
+            lead__event_start_date__lt=month_start
+        ).order_by("-lead__event_start_date")
 
-    elif tab == "future":
-        # ANY month AFTER current month
-        projects = projects.filter(
-            lead__event_start_date__year__gte=current_year
-        ).exclude(
-            lead__event_start_date__year=current_year,
-            lead__event_start_date__month__lte=current_month
-        )
+    projects = list(projects)
+    _attach_role_slots(projects)
 
-    # tab == None → NO FILTER → ALL PROJECTS
-
-    # ✅ MONTH GROUPING (SAFE)
     grouped = defaultdict(list)
     for p in projects:
         if p.lead and p.lead.event_start_date:
@@ -1147,9 +1205,8 @@ def sessions_view(request):
     return render(request, "sessions.html", {
         "grouped_projects": dict(grouped),
         "active_tab": tab,
+        "tbd_leads": [],
     })
-
-
 # invoice page view
 # invoice/views.py
 
@@ -1964,3 +2021,680 @@ def auto_create_invoice_from_lead(request):
         'total': float(invoice.total),
         'created': True
     })
+
+# ================================================================
+# ADD THESE VIEWS TO core/views.py
+# ================================================================
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST, require_GET
+from django.shortcuts import get_object_or_404
+from .models import Project, CrewMember, ProjectCrewAssignment
+import json
+
+
+# ── ROLE LABEL MAP ────────────────────────────────────────────────
+ROLE_LABELS = {
+    "TP": "Traditional Photographer",
+    "CP": "Candid Photographer",
+    "TV": "Traditional Videographer",
+    "CV": "Candid Videographer",
+    "CI": "Cinematic Videographer",
+    "DR": "Drone Operator",
+    "PH": "Photographer",
+    "VG": "Videographer",
+}
+
+
+def _get_busy_crew_ids(project, event_date, event_session):
+    """
+    Returns set of crew member IDs already assigned to another project
+    on the same date + session overlap.
+    """
+    from django.db.models import Q
+
+    overlapping = ProjectCrewAssignment.objects.filter(
+        project__lead__event_start_date__lte=event_date,
+        project__lead__event_end_date__gte=event_date,
+    ).exclude(project=project)
+
+    # Session overlap check
+    if event_session:
+        overlapping = overlapping.filter(
+            Q(project__lead__event_start_session=event_session) |
+            Q(project__lead__event_end_session=event_session)
+        )
+
+    return set(overlapping.values_list('crew_member_id', flat=True))
+
+
+# ── 1. GET CREW FOR SESSIONS CARD ────────────────────────────────
+@require_GET
+def get_project_crew(request, project_id):
+    """
+    Returns current crew assignments for a project card.
+    Called when sessions page loads to populate role slot circles.
+    """
+    project = get_object_or_404(Project, id=project_id)
+    assignments = ProjectCrewAssignment.objects.filter(
+        project=project
+    ).select_related('crew_member')
+
+    crew = []
+    for a in assignments:
+        crew.append({
+            'id':        a.crew_member.id,
+            'name':      a.crew_member.name,
+            'initials':  a.crew_member.name[:2].upper(),
+            'role':      a.crew_member.role,
+            'role_label': ROLE_LABELS.get(a.crew_member.role, a.crew_member.role),
+            'role_slot': a.role_slot,
+            'is_auto':   a.is_auto,
+        })
+
+    return JsonResponse({'crew': crew, 'project_id': project_id})
+
+
+# ── ROLE NAME → CODE NORMALISER ──────────────────────────────────
+ROLE_NAME_TO_CODE = {v.lower(): k for k, v in ROLE_LABELS.items()}
+
+def _normalise_role(raw):
+    """Convert full role name or code to DB code (e.g. 'Traditional Photographer' -> 'TP')."""
+    if not raw:
+        return raw
+    trimmed = raw.strip()
+    if trimmed in ROLE_LABELS:
+        return trimmed
+    return ROLE_NAME_TO_CODE.get(trimmed.lower(), trimmed)
+
+
+# ── 2. AUTO-ASSIGN ────────────────────────────────────────────────
+@require_POST
+def auto_assign_crew(request):
+    """
+    Auto-assigns crew members to a project.
+    - Normalises teamRoles (full name or code)
+    - Picks by priority order
+    - Each crew member used AT MOST ONCE per project
+    """
+    project_id = request.POST.get('project_id')
+    project = get_object_or_404(Project, id=project_id)
+    lead = project.lead
+
+    event_date    = lead.event_start_date
+    event_session = lead.event_start_session
+
+    # Collect & normalise all role slots from packages
+    services   = lead.selected_services or []
+    role_slots = []
+    for svc in services:
+        for role in (svc.get('teamRoles') or []):
+            code = _normalise_role(role)
+            if code:
+                role_slots.append(code)
+
+    if not role_slots:
+        return JsonResponse({'success': False, 'error': 'No role slots defined in this lead\'s packages'})
+
+    busy_ids = _get_busy_crew_ids(project, event_date, event_session)
+
+    # Clear existing auto assignments
+    ProjectCrewAssignment.objects.filter(project=project, is_auto=True).delete()
+
+    assigned = []
+    failed   = []
+    used_ids = set()  # same person never assigned twice
+
+    for idx, slot in enumerate(role_slots):
+        candidates = CrewMember.objects.filter(
+            role=slot,
+            is_active=True
+        ).exclude(
+            id__in=busy_ids | used_ids
+        ).order_by('priority')
+
+        if candidates.exists():
+            member = candidates.first()
+            ProjectCrewAssignment.objects.create(
+                project=project,
+                crew_member=member,
+                role_slot=slot,
+                is_auto=True
+            )
+            used_ids.add(member.id)
+            assigned.append({
+                'id':        member.id,
+                'name':      member.name,
+                'initials':  member.name[:2].upper(),
+                'role':      member.role,
+                'role_label': ROLE_LABELS.get(member.role, member.role),
+                'role_slot': slot,
+                'slot_id':   f"{slot}_{idx}",
+                'is_auto':   True,
+            })
+        else:
+            failed.append({
+                'role_slot':  slot,
+                'role_label': ROLE_LABELS.get(slot, slot),
+                'reason':     'No available crew for this role on this date'
+            })
+
+    return JsonResponse({
+        'success':  True,
+        'assigned': assigned,
+        'failed':   failed,
+        'project_id': project_id,
+    })
+
+
+# ── 3. MANUAL ASSIGN DATA ─────────────────────────────────────────
+@require_GET
+def crew_planning_data(request, project_id):
+    """
+    Returns all data needed for the Crew Planning popup:
+    - Role slots from the lead's packages
+    - Current assignments
+    - Available crew (grouped by role)
+    - Booked crew (with conflict info)
+    """
+    project = get_object_or_404(Project, id=project_id)
+    lead    = project.lead
+
+    event_date    = lead.event_start_date
+    event_session = lead.event_start_session
+
+    # ── Role slots needed ─────────────────────────────────────────
+    services = lead.selected_services or []
+    role_slots = []
+    seen_roles = {}
+    for svc in services:
+        for role in (svc.get('teamRoles') or []):
+            slot_idx = seen_roles.get(role, 0)
+            seen_roles[role] = slot_idx + 1
+            role_slots.append({
+                'role':      role,
+                'role_label': ROLE_LABELS.get(role, role),
+                'slot_index': slot_idx,
+                'slot_id':   f"{role}_{slot_idx}",  # unique per slot
+            })
+
+    # ── Current assignments ────────────────────────────────────────
+    current = {}
+    for a in ProjectCrewAssignment.objects.filter(project=project).select_related('crew_member'):
+        slot_key = a.role_slot
+        if slot_key not in current:
+            current[slot_key] = []
+        current[slot_key].append({
+            'id':       a.crew_member.id,
+            'name':     a.crew_member.name,
+            'initials': a.crew_member.name[:2].upper(),
+            'is_auto':  a.is_auto,
+        })
+
+    # ── Available vs booked ───────────────────────────────────────
+    busy_ids = _get_busy_crew_ids(project, event_date, event_session)
+
+    all_crew = CrewMember.objects.filter(is_active=True).order_by('role', 'priority')
+
+    available_by_role = {}
+    booked_by_role    = {}
+
+    for m in all_crew:
+        entry = {
+            'id':        m.id,
+            'name':      m.name,
+            'initials':  m.name[:2].upper(),
+            'role':      m.role,
+            'role_label': ROLE_LABELS.get(m.role, m.role),
+            'priority':  m.priority,
+            'phone':     m.phone,
+        }
+        if m.id in busy_ids:
+            booked_by_role.setdefault(m.role, []).append(entry)
+        else:
+            available_by_role.setdefault(m.role, []).append(entry)
+
+    # Format for frontend
+    available_groups = [
+        {
+            'role':       role,
+            'role_label': ROLE_LABELS.get(role, role),
+            'members':    members
+        }
+        for role, members in available_by_role.items()
+    ]
+    booked_groups = [
+        {
+            'role':       role,
+            'role_label': ROLE_LABELS.get(role, role),
+            'members':    members
+        }
+        for role, members in booked_by_role.items()
+    ]
+
+    # ── Date display ──────────────────────────────────────────────
+    date_display = ''
+    if event_date:
+        date_display = event_date.strftime('%b %d, %Y')
+
+    return JsonResponse({
+        'project_id':       project_id,
+        'client_name':      lead.client_name,
+        'event_type':       lead.event_type,
+        'date_display':     date_display,
+        'event_session':    event_session or '',
+        'role_slots':       role_slots,
+        'current_assignments': current,
+        'available_groups': available_groups,
+        'booked_groups':    booked_groups,
+    })
+
+
+# ── 4. SAVE MANUAL ASSIGNMENT ─────────────────────────────────────
+@require_POST
+def save_manual_crew(request):
+    """
+    Saves manual crew assignments.
+    Body: project_id, assignments = JSON array of {crew_member_id, role_slot}
+    """
+    project_id  = request.POST.get('project_id')
+    assignments_json = request.POST.get('assignments', '[]')
+
+    project = get_object_or_404(Project, id=project_id)
+
+    try:
+        assignments = json.loads(assignments_json)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Invalid assignments JSON'})
+
+    # Delete all existing manual assignments (keep auto if any)
+    ProjectCrewAssignment.objects.filter(project=project, is_auto=False).delete()
+
+    saved = []
+    for item in assignments:
+        crew_id  = item.get('crew_member_id')
+        role_slot = item.get('role_slot')
+        if not crew_id or not role_slot:
+            continue
+        member = CrewMember.objects.filter(id=crew_id, is_active=True).first()
+        if not member:
+            continue
+
+        # Avoid duplicate (project + crew_member)
+        obj, created = ProjectCrewAssignment.objects.get_or_create(
+            project=project,
+            crew_member=member,
+            defaults={'role_slot': role_slot, 'is_auto': False}
+        )
+        if created:
+            saved.append({
+                'id':       member.id,
+                'name':     member.name,
+                'initials': member.name[:2].upper(),
+                'role_slot': role_slot,
+            })
+
+    # Send notifications
+    _notify_crew(project, saved)
+
+    return JsonResponse({'success': True, 'saved': saved})
+
+
+# ── 5. REMOVE ONE CREW ASSIGNMENT ─────────────────────────────────
+@require_POST
+def remove_crew_assignment(request):
+    project_id     = request.POST.get('project_id')
+    crew_member_id = request.POST.get('crew_member_id')
+
+    ProjectCrewAssignment.objects.filter(
+        project_id=project_id,
+        crew_member_id=crew_member_id
+    ).delete()
+
+    return JsonResponse({'success': True})
+
+
+# ── 6. NOTIFICATION HELPER ────────────────────────────────────────
+def _notify_crew(project, saved_assignments):
+    """
+    Creates CrewNotification records for each newly assigned member.
+    These will show up in a future notifications page.
+    """
+    try:
+        from .models import CrewNotification
+        for item in saved_assignments:
+            CrewNotification.objects.get_or_create(
+                project=project,
+                crew_member_id=item['id'],
+                defaults={'status': 'PENDING'}
+            )
+    except Exception:
+        pass  # silent — notifications are bonus feature
+
+# ================================================================
+# ADD THIS FUNCTION TO core/views.py
+# It was referenced in urls.py but missing from views.py
+# ================================================================
+# ================================================================
+# REPLACE check_date_conflict in core/views.py with this
+#
+# Fixes:
+#  1. Accepts POST (not GET) — JS sends POST
+#  2. Reads 'exclude_lead_id' (not 'lead_id') — matches JS body
+#  3. Returns 'conflicts' (not 'conflicting') — matches JS check
+#  4. Returns 'date_display' field — used in popup rendering
+#  5. Checks date range overlap: any lead whose event spans the date
+# ================================================================
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from .models import Lead
+
+
+def check_date_conflict(request):
+    """
+    POST body params:
+      date             — YYYY-MM-DD date to check
+      exclude_lead_id  — (optional) lead ID to exclude (current lead)
+    """
+    if request.method not in ('POST', 'GET'):
+        return JsonResponse({'conflicts': []})
+
+    if request.method == 'POST':
+        date            = request.POST.get('date', '').strip()
+        exclude_lead_id = request.POST.get('exclude_lead_id', '').strip()
+    else:
+        date            = request.GET.get('date', '').strip()
+        exclude_lead_id = request.GET.get('exclude_lead_id', '') or request.GET.get('lead_id', '')
+
+    if not date:
+        return JsonResponse({'conflicts': []})
+
+    # Find all ACCEPTED leads whose date range overlaps the given date
+    qs = Lead.objects.filter(
+        status='ACCEPTED',
+        event_start_date__lte=date,
+        event_end_date__gte=date,
+    )
+
+    if exclude_lead_id:
+        try:
+            qs = qs.exclude(id=int(exclude_lead_id))
+        except (ValueError, TypeError):
+            pass
+
+    conflicts = []
+    for lead in qs.values(
+        'id', 'client_name', 'event_type',
+        'event_start_date', 'event_end_date',
+        'event_start_session', 'event_end_session'
+    ):
+        # Build human-readable date display
+        start = lead['event_start_date']
+        end   = lead['event_end_date']
+        if start == end:
+            date_display = start.strftime('%d %b %Y') if hasattr(start, 'strftime') else str(start)
+        else:
+            date_display = (
+                f"{start.strftime('%d %b') if hasattr(start, 'strftime') else str(start)}"
+                f" – "
+                f"{end.strftime('%d %b %Y') if hasattr(end, 'strftime') else str(end)}"
+            )
+
+        session_label = lead['event_start_session'] or ''
+        if session_label:
+            date_display += f'  ·  {session_label}'
+
+        conflicts.append({
+            'id':           lead['id'],
+            'client_name':  lead['client_name'],
+            'event_type':   lead['event_type'],
+            'date_display': date_display,
+        })
+
+    return JsonResponse({'conflicts': conflicts})
+
+# ================================================================
+# QUOTATION VIEW — add to core/views.py
+# URL: /leads/<lead_id>/quotation/
+# ================================================================
+
+from django.shortcuts import render, get_object_or_404
+from django.views.decorators.http import require_GET
+from .models import Lead
+import json
+
+
+def _fmt_inr(amount):
+    """Format number as Indian Rupees string, e.g. 4,20,000"""
+    if amount is None:
+        return '0'
+    try:
+        amount = int(amount)
+    except (ValueError, TypeError):
+        return str(amount)
+    # Indian number system: last 3 digits, then groups of 2
+    s = str(amount)
+    if len(s) <= 3:
+        return s
+    last3 = s[-3:]
+    rest = s[:-3]
+    groups = []
+    while len(rest) > 2:
+        groups.insert(0, rest[-2:])
+        rest = rest[:-2]
+    if rest:
+        groups.insert(0, rest)
+    return ','.join(groups) + ',' + last3
+
+
+def _fmt_date(d):
+    """Format a date object or string to '15 Jan 2026'"""
+    if not d:
+        return None
+    try:
+        if hasattr(d, 'strftime'):
+            return d.strftime('%d %b %Y')
+        from datetime import datetime
+        dt = datetime.strptime(str(d), '%Y-%m-%d')
+        return dt.strftime('%d %b %Y')
+    except Exception:
+        return str(d)
+
+
+@require_GET
+def quotation_view(request, lead_id):
+    """
+    Client-facing quotation page for a lead.
+    Shows: events + crew, deliverables, additional services, pricing.
+    All fields are READ-ONLY (display only).
+    """
+    lead = get_object_or_404(Lead, id=lead_id)
+
+    # ── Selected services (packages) ─────────────────────────────
+    services = lead.selected_services or []
+
+    # Enrich each service with display-friendly fields
+    enriched = []
+    has_extras = False
+
+    for svc in services:
+        s = dict(svc)
+
+        # Date display
+        if s.get('dateTBD'):
+            s['event_date_display'] = 'TBD'
+        elif s.get('eventDate'):
+            s['event_date_display'] = _fmt_date(s['eventDate'])
+        else:
+            s['event_date_display'] = None
+
+        # Session display
+        s['session_display'] = s.get('eventSession') or ''
+
+        # Crew detail — normalize to list of dicts
+        crew_detail = s.get('crewDetail') or []
+        if not crew_detail and s.get('crew'):
+            # Legacy string format "Role x2"
+            crew_detail = []
+            for c in s['crew']:
+                parts = c.split(' x') if ' x' in c else [c, '1']
+                crew_detail.append({
+                    'role': parts[0].strip(),
+                    'qty': int(parts[1]) if len(parts) > 1 else 1,
+                    'baseQty': int(parts[1]) if len(parts) > 1 else 1,
+                    'isExtra': False,
+                    'pricePerHead': 0,
+                    'price_display': '0',
+                })
+        # Add price_display to each crew row
+        for c in crew_detail:
+            pph = float(c.get('pricePerHead') or 0)
+            qty = int(c.get('qty') or 1)
+            base = int(c.get('baseQty') or qty)
+            extra_qty = max(0, qty - base)
+            charge = (qty if c.get('isExtra') else extra_qty) * pph
+            c['price_display'] = _fmt_inr(int(charge))
+            if c.get('isExtra') or extra_qty > 0:
+                has_extras = True
+
+        s['crewDetail'] = crew_detail
+        enriched.append(s)
+
+    # ── Pricing ───────────────────────────────────────────────────
+    pricing = lead.pricing_data or {}
+    if isinstance(pricing, str):
+        try:
+            pricing = json.loads(pricing)
+        except Exception:
+            pricing = {}
+
+    # Add display versions of pricing fields
+    pricing_ctx = dict(pricing)
+    pricing_ctx['subtotal_display']  = _fmt_inr(int(pricing.get('subtotal') or 0))
+    pricing_ctx['discount_display']  = _fmt_inr(int(pricing.get('discountAmount') or 0))
+    pricing_ctx['gst_display']       = _fmt_inr(int(pricing.get('gstAmount') or 0))
+    pricing_ctx['final_display']     = _fmt_inr(int(pricing.get('finalTotal') or lead.total_amount or 0))
+
+    total_amount = float(pricing.get('finalTotal') or lead.total_amount or 0)
+
+    return render(request, 'quotation.html', {
+        'lead':                lead,
+        'selected_services':   enriched,
+        'pricing_data':        pricing_ctx,
+        'total_amount_display': _fmt_inr(int(total_amount)),
+        'has_extras':          has_extras,
+    })
+
+
+# ================================================================
+# ADD THIS VIEW TO core/views.py
+# ================================================================
+# Also add to urls.py:
+#   path('leads/<int:lead_id>/quotation/pdf/', views.quotation_pdf_view, name='quotation_pdf'),
+# ================================================================
+
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
+from django.templatetags.static import static
+from django.conf import settings
+import weasyprint
+import json
+import os
+
+
+def quotation_pdf_view(request, lead_id):
+    """
+    Renders the quotation as a PDF and returns it as a download.
+    Uses WeasyPrint to convert the HTML template server-side —
+    so all images, fonts, and styles are captured exactly as they appear.
+    """
+    lead = get_object_or_404(Lead, id=lead_id)
+
+    # ── Same data prep as quotation_view ─────────────────────────
+    services = lead.selected_services or []
+    enriched = []
+    has_extras = False
+
+    for svc in services:
+        s = dict(svc)
+        if s.get('dateTBD'):
+            s['event_date_display'] = 'TBD'
+        elif s.get('eventDate'):
+            s['event_date_display'] = _fmt_date(s['eventDate'])
+        else:
+            s['event_date_display'] = None
+
+        s['session_display'] = s.get('eventSession') or ''
+
+        crew_detail = s.get('crewDetail') or []
+        if not crew_detail and s.get('crew'):
+            crew_detail = []
+            for c in s['crew']:
+                parts = c.split(' x') if ' x' in c else [c, '1']
+                crew_detail.append({
+                    'role': parts[0].strip(),
+                    'qty': int(parts[1]) if len(parts) > 1 else 1,
+                    'baseQty': int(parts[1]) if len(parts) > 1 else 1,
+                    'isExtra': False,
+                    'pricePerHead': 0,
+                    'price_display': '0',
+                })
+        for c in crew_detail:
+            pph = float(c.get('pricePerHead') or 0)
+            qty = int(c.get('qty') or 1)
+            base = int(c.get('baseQty') or qty)
+            extra_qty = max(0, qty - base)
+            charge = (qty if c.get('isExtra') else extra_qty) * pph
+            c['price_display'] = _fmt_inr(int(charge))
+            if c.get('isExtra') or extra_qty > 0:
+                has_extras = True
+
+        s['crewDetail'] = crew_detail
+        enriched.append(s)
+
+    pricing = lead.pricing_data or {}
+    if isinstance(pricing, str):
+        try:
+            pricing = json.loads(pricing)
+        except Exception:
+            pricing = {}
+
+    pricing_ctx = dict(pricing)
+    pricing_ctx['subtotal_display']  = _fmt_inr(int(pricing.get('subtotal') or 0))
+    pricing_ctx['discount_display']  = _fmt_inr(int(pricing.get('discountAmount') or 0))
+    pricing_ctx['gst_display']       = _fmt_inr(int(pricing.get('gstAmount') or 0))
+    pricing_ctx['final_display']     = _fmt_inr(int(pricing.get('finalTotal') or lead.total_amount or 0))
+
+    total_amount = float(pricing.get('finalTotal') or lead.total_amount or 0)
+
+    context = {
+        'lead':                lead,
+        'selected_services':   enriched,
+        'pricing_data':        pricing_ctx,
+        'total_amount_display': _fmt_inr(int(total_amount)),
+        'has_extras':          has_extras,
+        'is_pdf':              True,   # hides nav/download button via template tag
+    }
+
+    # ── Render HTML string ────────────────────────────────────────
+    html_string = render_to_string('quotation.html', context, request=request)
+
+    # ── Build base URL so WeasyPrint resolves relative paths ─────
+    base_url = request.build_absolute_uri('/')
+
+    # ── Generate PDF ──────────────────────────────────────────────
+    pdf_file = weasyprint.HTML(
+        string=html_string,
+        base_url=base_url
+    ).write_pdf()
+
+    # ── Return as download ────────────────────────────────────────
+    client_name = lead.client_name.replace(' ', '_')
+    filename = f'AR_Akash_Photography_{client_name}.pdf'
+
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response

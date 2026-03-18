@@ -111,6 +111,15 @@ path("team-responses/delete/", views.delete_project_responses, name="delete_proj
 path("team/project-overview/", views.team_project_overview_api),
  path('invoice/auto-create-from-lead/', views.auto_create_invoice_from_lead,
        name='auto_create_invoice_from_lead'),
+       path('leads/check-date-conflict/', views.check_date_conflict, name='check_date_conflict'),
+    #    sessions
+        path('crew/project/<int:project_id>/',       views.get_project_crew,    name='get_project_crew'),
+    path('crew/auto-assign/',                    views.auto_assign_crew,    name='auto_assign_crew'),
+    path('crew/planning/<int:project_id>/',      views.crew_planning_data,  name='crew_planning_data'),
+    path('crew/save-manual/',                    views.save_manual_crew,    name='save_manual_crew'),
+    path('crew/remove/',                         views.remove_crew_assignment, name='remove_crew_assignment'),
 
+path('leads/<int:lead_id>/quotation/', views.quotation_view, name='quotation_view'),
+path('leads/<int:lead_id>/quotation/pdf/', views.quotation_pdf_view, name='quotation_pdf'),
 
 ]

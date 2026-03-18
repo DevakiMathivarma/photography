@@ -336,3 +336,63 @@ class TeamResponseNotification(models.Model):
 
     def __str__(self):
         return f"{self.project} - {self.member} - {self.response_status}"
+    
+
+    # ================================================================
+
+class CrewMember(models.Model):
+
+    ROLE_CHOICES = [
+        ("TP", "Traditional Photographer"),
+        ("CP", "Candid Photographer"),
+        ("TV", "Traditional Videographer"),
+        ("CV", "Candid Videographer"),
+        ("DR", "Drone Operator"),
+        ("CI", "Cinematic Videographer"),
+        ("PH", "Photographer"),
+        ("VG", "Videographer"),
+    ]
+
+    name         = models.CharField(max_length=100)
+    phone        = models.CharField(max_length=15, blank=True)
+    email        = models.EmailField(blank=True)
+    role         = models.CharField(max_length=10, choices=ROLE_CHOICES)
+
+    # Priority: 1 = highest (assigned first), higher number = lower priority
+    priority     = models.PositiveIntegerField(default=1)
+
+    is_active    = models.BooleanField(default=True)
+    joined_date  = models.DateField(null=True, blank=True)
+    notes        = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['role', 'priority']
+
+    def __str__(self):
+        return f"{self.name} ({self.get_role_display()}) — Priority {self.priority}"
+
+
+# ================================================================
+# Also add this to store crew assignments per project
+# ================================================================
+
+class ProjectCrewAssignment(models.Model):
+    project     = models.ForeignKey(
+        'Project',
+        on_delete=models.CASCADE,
+        related_name='crew_assignments'
+    )
+    crew_member = models.ForeignKey(
+        CrewMember,
+        on_delete=models.CASCADE,
+        related_name='assignments'
+    )
+    role_slot   = models.CharField(max_length=10)  # e.g. "TP", "CV"
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    is_auto     = models.BooleanField(default=False)  # True = auto-assigned
+
+    class Meta:
+        unique_together = ('project', 'crew_member')
+
+    def __str__(self):
+        return f"{self.crew_member.name} → {self.project} [{self.role_slot}]"

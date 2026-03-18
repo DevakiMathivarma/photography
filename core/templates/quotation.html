@@ -1,0 +1,1198 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quotation — {{ lead.client_name }} | AR Akash Photography</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ================================================================
+   AR AKASH PHOTOGRAPHY — CLIENT QUOTATION PAGE
+   Luxury wedding photography proposal
+================================================================ */
+
+:root {
+  --mauve:    #7d3f5a;
+  --mauve-dk: #5a2d42;
+  --mauve-lt: #f3e6ec;
+  --blush:    #f8ede8;
+  --cream:    #fdf7f4;
+  --ink:      #2c1a22;
+  --muted:    #7a5a65;
+  --gold:     #c9a46e;
+  --white:    #ffffff;
+  --border:   rgba(125,63,90,0.18);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Jost', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  font-weight: 300;
+  line-height: 1.7;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ── TYPOGRAPHY ── */
+h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
+
+/* ── NO-PRINT ELEMENTS ── */
+.no-print { }
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+  .section { page-break-inside: avoid; }
+}
+
+/* ================================================================
+   TOP NAV BAR
+================================================================ */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  background: var(--mauve);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  height: 56px;
+}
+.topbar-nav { display: flex; gap: 32px; }
+.topbar-nav a {
+  color: rgba(255,255,255,0.85);
+  text-decoration: none;
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 400;
+  transition: color 0.2s;
+}
+.topbar-nav a:hover { color: white; }
+.topbar-logo {
+  font-family: 'Cormorant Garamond', serif;
+  color: white;
+  font-size: 18px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-align: center;
+}
+.topbar-price {
+  color: rgba(255,255,255,0.9);
+  font-size: 14px;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.topbar-price svg { opacity: 0.7; }
+.topbar-price .price-val { font-weight: 500; font-size: 15px; }
+
+/* ================================================================
+   HERO
+================================================================ */
+.hero {
+  position: relative;
+  height: 100vh;
+  min-height: 600px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, #2c1a22 0%, #5a2d42 60%, #7d3f5a 100%);
+}
+.hero-bg img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+  display: block;
+}
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(44,26,34,0.3) 0%, rgba(44,26,34,0.15) 50%, rgba(44,26,34,0.5) 100%);
+}
+.hero-content {
+  position: relative;
+  z-index: 2;
+  color: white;
+  max-width: 700px;
+  padding: 0 20px;
+}
+.hero-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 28px;
+}
+.hero-brand-logo {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 10px;
+  opacity: 0.9;
+}
+.hero-brand-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 13px;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.hero-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 400;
+  line-height: 1.2;
+  margin-bottom: 14px;
+}
+.hero-subtitle {
+  font-size: 13px;
+  letter-spacing: 2px;
+  opacity: 0.7;
+  font-style: italic;
+}
+
+/* ================================================================
+   WELCOME SECTION
+================================================================ */
+.welcome {
+  background: var(--blush);
+  padding: 90px 40px;
+  text-align: center;
+}
+.welcome h2 {
+  font-size: clamp(28px, 4vw, 42px);
+  color: var(--mauve-dk);
+  margin-bottom: 28px;
+}
+.welcome p {
+  max-width: 660px;
+  margin: 0 auto 36px;
+  font-size: 14.5px;
+  color: var(--muted);
+  line-height: 1.9;
+}
+.welcome-btn {
+  display: inline-block;
+  border: 1px solid var(--mauve);
+  color: var(--mauve);
+  padding: 12px 36px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: all 0.25s;
+  cursor: pointer;
+  background: transparent;
+  font-family: 'Jost', sans-serif;
+}
+.welcome-btn:hover { background: var(--mauve); color: white; }
+
+/* ================================================================
+   OUR STORY
+================================================================ */
+.story {
+  background: var(--cream);
+  padding: 80px 40px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  align-items: center;
+}
+.story-image {
+  position: relative;
+  padding-right: 30px;
+}
+.story-image img {
+  width: 100%;
+  height: 480px;
+  object-fit: cover;
+  display: block;
+  margin-left: 100px;
+}
+.story-image-placeholder {
+  width: 100%;
+  height: 480px;
+  background: linear-gradient(135deg, var(--mauve-lt), var(--blush));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 2px;
+}
+.story-text {
+  background: var(--mauve);
+  color: rgba(255,255,255,0.9);
+  padding: 30px 120px;
+  margin-top: 100px;
+  
+  
+}
+.story-text h2 {
+  font-size: 25px;
+  color: white;
+  margin-bottom: 24px;
+  font-weight: 400;
+  text-align: left;
+}
+.story-text p {
+  font-size: 12px;
+  line-height: 1.9;
+  opacity: 0.85;
+  margin-bottom: 16px;
+  text-align: left;
+}
+.story-text p:last-child { margin-bottom: 0; }
+/* ================================================================
+   SIGNATURE WORKS
+================================================================ */
+.gallery-section {
+  background: var(--blush);
+  padding: 80px 40px;
+  text-align: center;
+}
+.gallery-section h2 {
+  font-size: clamp(28px, 4vw, 40px);
+  color: var(--mauve-dk);
+  margin-bottom: 52px;
+}
+.gallery-grid {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  align-items: flex-start;   /* ← changed from flex-end */
+  overflow-x: auto;
+  padding-bottom: 8px;
+  padding-top: 40px;
+}
+.gallery-item {
+  flex: 0 0 auto;
+  text-align: center;
+}
+
+/* ── stagger: 1 and 5 sit lowest, 2 and 4 rise a bit, 3 rises most ── */
+.gallery-item:nth-child(1) { transform: translateY(60px); }
+.gallery-item:nth-child(2) { transform: translateY(20px); }
+.gallery-item:nth-child(3) { transform: translateY(-40px); }
+.gallery-item:nth-child(3) .gallery-img {
+  height: 280px;
+  width: 280px;
+} /* tallest, stays at top */
+.gallery-item:nth-child(4) { transform: translateY(20px); }
+.gallery-item:nth-child(5) { transform: translateY(60px); }
+
+/* ── image sizes: center taller ── */
+.gallery-item:nth-child(3) .gallery-img {
+  height: 480px;
+  width: 280px;
+}
+.gallery-img {
+  width: 200px;
+  height: 280px;
+  object-fit: cover;
+  display: block;
+}
+.gallery-img-placeholder {
+  width: 170px;
+  height: 240px;
+  background: linear-gradient(160deg, var(--mauve-lt), rgba(125,63,90,0.15));
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 20px;
+}
+.gallery-item h4 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 14px;
+  color: var(--mauve-dk);
+  margin-top: 12px;
+  font-weight: 500;
+}
+.gallery-item small {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+/* ================================================================
+   VIDEO SHOWCASE
+================================================================ */
+.video-section {
+  background: var(--cream);
+  padding: 80px 40px;
+  text-align: center;
+  margin-bottom: 50px;
+}
+.video-section h2 {
+  font-size: clamp(28px, 4vw, 42px);
+  color: black;
+  margin-bottom: 10px;
+}
+.video-subtitle {
+  font-size: 13px;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 2px;
+  font-style: italic;
+  margin-bottom: 48px;
+}
+.video-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 12px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+/* Large video spans 2 rows on left */
+.video-item--large {
+  grid-row: 1 / 3;
+}
+.video-item {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+.video-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  min-height: 220px;
+  transition: transform 0.5s ease;
+}
+.video-item--large video {
+  min-height: 460px;
+}
+.video-item:hover video {
+  transform: scale(1.04);
+}
+/* Dark gradient overlay */
+.video-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(44,26,34,0.75) 0%,
+    rgba(44,26,34,0.1) 50%,
+    transparent 100%
+  );
+  display: flex;
+  align-items: flex-end;
+  padding: 20px;
+  transition: background 0.3s;
+}
+.video-item:hover .video-overlay {
+  background: linear-gradient(
+    to top,
+    rgba(44,26,34,0.5) 0%,
+    transparent 100%
+  );
+}
+.video-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  color: white;
+  letter-spacing: 2px;
+  font-weight: 400;
+}
+@media (max-width: 768px) {
+  .video-grid { grid-template-columns: 1fr; }
+  .video-item--large { grid-row: auto; }
+}
+@media print {
+  .video-section { display: none; }
+}
+/* ================================================================
+   DEAR CLIENT
+================================================================ */
+.dear-client {
+  background: var(--mauve);
+  padding: 60px 40px;
+  text-align: center;
+  color: white;
+}
+.dear-client .small-label {
+  font-style: italic;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px;
+  opacity: 0.7;
+  margin-bottom: 8px;
+}
+.dear-client h2 {
+  font-size: clamp(32px, 5vw, 52px);
+  color: white;
+  font-weight: 400;
+  letter-spacing: 1px;
+}
+.dear-client p {
+  margin-top: 14px;
+  font-size: 14px;
+  opacity: 0.75;
+  letter-spacing: 1px;
+}
+
+/* ================================================================
+   PAYMENT PRICE
+================================================================ */
+.payment-price {
+  background: var(--mauve-dk);
+  padding: 70px 40px;
+  text-align: center;
+  color: white;
+}
+.payment-price h2 {
+  font-size: 36px;
+  color: white;
+  margin-bottom: 10px;
+}
+.payment-price .subtitle {
+  font-size: 13px;
+  opacity: 0.65;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+}
+.price-display {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(36px, 6vw, 56px);
+  font-weight: 400;
+  color: rgba(255,255,255,0.95);
+  letter-spacing: 1px;
+}
+.price-breakdown {
+  margin-top: 20px;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  background: rgba(255,255,255,0.07);
+  padding: 18px 28px;
+  border-radius: 4px;
+  min-width: 260px;
+}
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+  font-size: 13px;
+  opacity: 0.8;
+}
+.price-row.total-row {
+  border-top: 1px solid rgba(255,255,255,0.2);
+  padding-top: 8px;
+  margin-top: 4px;
+  opacity: 1;
+  font-weight: 500;
+}
+
+/* ================================================================
+   EVENTS
+================================================================ */
+.events-section {
+  background: var(--blush);
+  padding: 80px 40px;
+  text-align: center;
+}
+.events-section h2 {
+  font-size: clamp(28px, 4vw, 40px);
+  color: var(--mauve-dk);
+  margin-bottom: 48px;
+}
+.events-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+  max-width: 960px;
+  margin: 0 auto;
+  text-align: left;
+}
+.event-card {
+  background: rgba(255,255,255,0.7);
+  border: 1px solid var(--border);
+  padding: 32px 28px;
+  border-radius: 4px;
+}
+.event-card h3 {
+  font-size: 22px;
+  color: var(--mauve-dk);
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.event-card ul {
+  list-style: none;
+}
+.event-card li {
+  font-size: 13.5px;
+  color: var(--muted);
+  padding: 5px 0;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.event-card li::before {
+  content: '';
+  width: 4px; height: 4px;
+  background: var(--mauve);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.event-date-badge {
+  display: inline-block;
+  background: var(--mauve-lt);
+  color: var(--mauve);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+/* ================================================================
+   DELIVERABLES
+================================================================ */
+.deliverables-section {
+  background: var(--cream);
+  padding: 80px 40px;
+  text-align: center;
+}
+.deliverables-section h2 {
+  font-size: clamp(28px, 4vw, 40px);
+  color: var(--mauve-dk);
+  margin-bottom: 40px;
+}
+.deliverables-list {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.deliverable-item {
+  background: rgba(255,255,255,0.8);
+  border: 1px solid var(--border);
+  padding: 18px 28px;
+  border-radius: 4px;
+  text-align: left;
+  font-size: 14px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.deliverable-item::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--mauve);
+  flex-shrink: 0;
+}
+.deliverable-extra {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+/* ================================================================
+   ADDITIONAL SERVICES
+================================================================ */
+.addl-section {
+  background: var(--blush);
+  padding: 80px 40px;
+  text-align: center;
+}
+.addl-section h2 {
+  font-size: clamp(28px, 4vw, 40px);
+  color: var(--mauve-dk);
+  margin-bottom: 40px;
+}
+.addl-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 720px;
+  margin: 0 auto 16px;
+  padding: 14px 20px;
+  border-left: 3px solid var(--mauve);
+  background: rgba(255,255,255,0.5);
+  font-size: 13px;
+  color: var(--muted);
+}
+.addl-list {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.addl-item {
+  background: rgba(255,255,255,0.7);
+  border: 1px solid var(--border);
+  padding: 20px 24px;
+  border-radius: 4px;
+  text-align: left;
+}
+.addl-item-name {
+  font-size: 14.5px;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+.addl-item-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-end;
+}
+.addl-qty {
+  font-size: 13px;
+  color: var(--muted);
+}
+.addl-price {
+  font-size: 13px;
+  color: var(--muted);
+}
+.addl-badge {
+  background: var(--mauve);
+  color: white;
+  font-size: 11px;
+  padding: 5px 16px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ================================================================
+   EDITORIAL (HEY SWEETHEARTS)
+================================================================ */
+.editorial {
+  background: var(--mauve);
+  padding: 80px 40px;
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 50px;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.editorial-images {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.editorial-images img,
+.editorial-img-placeholder {
+  width: 100%;
+  aspect-ratio: 3/4;
+  object-fit: cover;
+  display: block;
+}
+.editorial-img-placeholder {
+  background: rgba(255,255,255,0.1);
+}
+.editorial-text {
+  color: rgba(255,255,255,0.9);
+}
+.editorial-text .tagline {
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: 0.65;
+  margin-bottom: 12px;
+}
+.editorial-text h2 {
+  font-size: clamp(28px, 4vw, 44px);
+  color: white;
+  margin-bottom: 12px;
+  line-height: 1.1;
+}
+.editorial-text .sep {
+  width: 40px;
+  height: 1px;
+  background: rgba(255,255,255,0.35);
+  margin: 20px 0;
+}
+.editorial-text p {
+  font-size: 13.5px;
+  line-height: 1.9;
+  opacity: 0.8;
+  margin-bottom: 14px;
+}
+
+/* ================================================================
+   TERMS & CONDITIONS
+================================================================ */
+.terms-section {
+  background: var(--blush);
+  padding: 80px 40px;
+  text-align: center;
+}
+.terms-section h2 {
+  font-size: clamp(28px, 4vw, 40px);
+  color: var(--mauve-dk);
+  margin-bottom: 40px;
+}
+.terms-list {
+  max-width: 680px;
+  margin: 0 auto;
+  text-align: left;
+  counter-reset: terms;
+}
+.terms-list li {
+  counter-increment: terms;
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.8;
+  padding: 10px 0 10px 48px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  list-style: none;
+}
+.terms-list li::before {
+  content: counter(terms) '.';
+  position: absolute;
+  left: 0;
+  color: var(--mauve);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px;
+  font-weight: 500;
+}
+.terms-list li:last-child { border-bottom: none; }
+
+/* ================================================================
+   FOOTER
+================================================================ */
+.footer {
+  background: var(--mauve);
+  padding: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 40px;
+}
+.footer-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.footer-logo svg {
+  width: 44px;
+  height: 44px;
+  opacity: 0.9;
+}
+.footer-brand-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 10px;
+  letter-spacing: 5px;
+  color: rgba(255,255,255,0.7);
+  text-transform: uppercase;
+}
+.footer-gallery {
+  display: flex;
+  gap: 6px;
+}
+.footer-gallery img,
+.footer-gallery-img {
+  width: 62px;
+  height: 62px;
+  object-fit: cover;
+  opacity: 0.85;
+}
+.footer-gallery-img {
+  background: rgba(255,255,255,0.15);
+}
+.footer-socials {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.footer-socials a {
+  color: rgba(255,255,255,0.7);
+  text-decoration: none;
+  font-size: 22px;
+  transition: opacity 0.2s;
+}
+.footer-socials a:hover { opacity: 1; color: white; }
+
+/* ================================================================
+   DOWNLOAD BUTTON
+================================================================ */
+.download-fab {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  background: var(--mauve);
+  color: white;
+  border: none;
+  padding: 14px 24px;
+  font-family: 'Jost', sans-serif;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 32px rgba(90,45,66,0.35);
+  z-index: 999;
+  transition: background 0.2s, transform 0.15s;
+}
+.download-fab:hover {
+  background: var(--mauve-dk);
+  transform: translateY(-2px);
+}
+
+/* ================================================================
+   RESPONSIVE
+================================================================ */
+@media (max-width: 768px) {
+  .story { grid-template-columns: 1fr; }
+  .story-image { padding-right: 0; }
+  .editorial { grid-template-columns: 1fr; }
+  .gallery-grid { justify-content: flex-start; }
+  .topbar { padding: 0 16px; }
+  .topbar-nav { display: none; }
+  .footer { flex-direction: column; gap: 24px; }
+}
+
+@media print {
+  .topbar, .download-fab { display: none !important; }
+  .hero { height: 60vh; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topbar no-print" id="topbar">
+  <div class="topbar-nav">
+    <a href="#proposal" onclick="scrollTo('proposal')">Proposal</a>
+    <a href="#gallery" onclick="scrollTo('gallery')">Gallery</a>
+  </div>
+  <div class="topbar-logo">AKASH</div>
+  <div class="topbar-price">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <span class="price-val">₹ {{ total_amount_display }}</span>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="proposal">
+  <div class="hero-bg">
+    <img src="{% static 'images/qbanner.png' %}">
+         alt="Wedding photography hero"
+         style="width:100%;height:100%;object-fit:cover;opacity:0.6;display:block;">
+  </div>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-brand">
+      <svg class="hero-brand-logo" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="40" cy="40" r="38" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+        <text x="40" y="52" text-anchor="middle" fill="white" font-family="Cormorant Garamond, serif" font-size="30" font-weight="300">AR</text>
+      </svg>
+      <span class="hero-brand-name">AKASH</span>
+    </div>
+    <h1 class="hero-title">Framing the Joy of Your Grand Occasion</h1>
+    <p class="hero-subtitle">Where Love Meets Legacy in Unforgettable Moments</p>
+  </div>
+</section>
+
+<!-- WELCOME -->
+<section class="welcome section" id="about">
+  <h2>Welcome to AR Akash Photography</h2>
+  <p>Since 2015, AR Akash Photography has been crafting stories through bespoke photography and videography. Serving Vizag, across AP, Telangana, and Chennai, we offer candid &amp; traditional photography, cinematic wedding films, bridal shoots, maternity sessions, fashion, themed shoots, and pre-wedding films—capturing your moments with creativity and care.</p>
+  <button class="welcome-btn" onclick="document.getElementById('gallery').scrollIntoView({behavior:'smooth'})">View Gallery</button>
+</section>
+
+<!-- OUR STORY -->
+<section class="section" style="background:var(--cream);padding:80px 40px;">
+  <div class="story">
+    <div class="story-image">
+      <img src="https://images.unsplash.com/photo-1583939411023-14783179e581?w=900&q=80&fit=crop"
+           alt="Wedding couple"
+           style="width:100%;height:480px;object-fit:cover;display:block;">
+    </div>
+    <div class="story-text">
+      <h2>Our Story</h2>
+      <p>At AR Akash Photography, we have been capturing love stories since 2015, turning wedding moments into timeless memories. With over a decade of experience, our dedicated team blends creativity, passion, and precision to document every emotion — from candid smiles to grand celebrations.</p>
+      <p>We specialize in pre-wedding, wedding, and post-wedding shoots, ensuring every frame reflects elegance, authenticity, and joy. Having served hundreds of happy couples, we take pride in crafting stunning visuals and luxury albums that you'll cherish for a lifetime.</p>
+      <p>With over 10 years of experience and 1,000+ projects completed, we're known for creative storytelling, attention to detail, and client-centric service.</p>
+      <p style="margin-top:20px;font-size:13px;opacity:0.6;letter-spacing:1px;">Owned by Akash Ramchandran</p>
+    </div>
+  </div>
+</section>
+
+<!-- SIGNATURE WORKS -->
+<section class="gallery-section section" id="gallery">
+  <h2>Signature Works</h2>
+  <div class="gallery-grid">
+    <div class="gallery-item">
+      <img src="https://images.unsplash.com/photo-1519741497674-611481863552?w=400&q=80&fit=crop" alt="Vyshnavi & Koushik" class="gallery-img" loading="lazy">
+      <h4>Vyshnavi &amp; Koushik</h4>
+      <small>View the Images</small>
+    </div>
+    <div class="gallery-item">
+    <img src="{% static 'images/qbanner.png' %}" alt="Vyshnavi & Koushik" class="gallery-img" loading="lazy">
+      <h4>Shruthi &amp; Hanoop</h4>
+      <small>View the Images</small>
+    </div>
+    <div class="gallery-item">
+      <img src="https://images.unsplash.com/photo-1591604466107-ec97de577aff?w=400&q=80&fit=crop" alt="Nithish & Niharika" class="gallery-img" loading="lazy">
+      <h4>Nithish &amp; Niharika</h4>
+      <small>View the Images</small>
+    </div>
+    <div class="gallery-item">
+      <img src="https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=400&q=80&fit=crop" alt="Eesha & Srivastav" class="gallery-img" loading="lazy">
+      <h4>Eesha &amp; Srivastav</h4>
+      <small>View the Images</small>
+    </div>
+    <div class="gallery-item">
+      <img src="https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=400&q=80&fit=crop" alt="Tripura & Jagadeesh" class="gallery-img" loading="lazy">
+      <h4>Tripura &amp; Jagadeesh</h4>
+      <small>View the Images</small>
+    </div>
+  </div>
+</section>
+
+<!-- DEAR CLIENT -->
+<section class="dear-client section">
+  <p class="small-label">Dear</p>
+  <h2>{{ lead.client_name }}</h2>
+  <p>Thanks for Choosing US!</p>
+</section>
+<!-- VIDEO SHOWCASE SECTION -->
+<section class="video-section section">
+  <h2>Our Films</h2>
+  <p class="video-subtitle">Cinematic stories told through our lens</p>
+  <div class="video-grid">
+    <div class="video-item video-item--large">
+      <video autoplay muted loop playsinline>
+        <source src="{% static 'images/video1.mp4' %}" type="video/mp4">
+      </video>
+      <div class="video-overlay">
+        <span class="video-label">Wedding Film</span>
+      </div>
+    </div>
+    <div class="video-item">
+      <video autoplay muted loop playsinline>
+        <source src="{% static 'images/video2.mp4' %}" type="video/mp4">
+      </video>
+      <div class="video-overlay">
+        <span class="video-label">Pre Wedding</span>
+      </div>
+    </div>
+    <div class="video-item">
+      <video autoplay muted loop playsinline>
+       <source src="{% static 'images/video3.mp4' %}" type="video/mp4">
+      </video>
+      <div class="video-overlay">
+        <span class="video-label">Cinematic Reel</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PAYMENT PRICE -->
+<section class="payment-price section">
+  <h2>Payment Price</h2>
+  <p class="subtitle">Your total package cost</p>
+  <div class="price-display">₹{{ total_amount_display }}</div>
+
+  {% if pricing_data %}
+  <div class="price-breakdown">
+    {% if pricing_data.subtotal %}
+    <div class="price-row">
+      <span>Sub Total</span>
+      <span>₹{{ pricing_data.subtotal_display }}</span>
+    </div>
+    {% endif %}
+    {% if pricing_data.discountAmount > 0 %}
+    <div class="price-row">
+      <span>Discount{% if pricing_data.discountType == 'percent' %} ({{ pricing_data.discountValue }}%){% endif %}</span>
+      <span style="color:#a8d5a2">− ₹{{ pricing_data.discount_display }}</span>
+    </div>
+    {% endif %}
+    {% if pricing_data.gstAmount > 0 %}
+    <div class="price-row">
+      <span>GST ({{ pricing_data.gstRate }}%)</span>
+      <span style="color:#a8c9e8">+ ₹{{ pricing_data.gst_display }}</span>
+    </div>
+    {% endif %}
+    <div class="price-row total-row">
+      <span>Total</span>
+      <span>₹{{ total_amount_display }}</span>
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+<!-- EVENTS -->
+<section class="events-section section">
+  <h2>Events</h2>
+  <div class="events-grid">
+    {% for svc in selected_services %}
+    <div class="event-card">
+      {% if svc.eventDate %}
+        <div class="event-date-badge">{{ svc.event_date_display }}</div>
+      {% elif svc.dateTBD %}
+        <div class="event-date-badge" style="background:rgba(125,63,90,0.08);color:var(--muted);">Date TBD</div>
+      {% endif %}
+      <h3>{{ svc.label }}</h3>
+      <ul>
+        {% for crew in svc.crewDetail %}
+        <li>{{ crew.qty }} {{ crew.role }}</li>
+        {% empty %}
+        {% for crew_str in svc.crew %}
+        <li>{{ crew_str }}</li>
+        {% endfor %}
+        {% endfor %}
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- DELIVERABLES -->
+<section class="deliverables-section section">
+  <h2>Delivarables</h2>
+  <div class="deliverables-list">
+    {% for svc in selected_services %}
+      {% for del in svc.deliverables %}
+      <div class="deliverable-item">
+        {{ del }}
+        {% if svc.extraDelCost > 0 %}
+        <span class="deliverable-extra">included</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% endfor %}
+  </div>
+</section>
+
+<!-- ADDITIONAL SERVICES (extra crew / services beyond base) -->
+{% if has_extras %}
+<section class="addl-section section">
+  <h2>Additional Services</h2>
+  <div class="addl-header">
+    <span>Select one or more services below</span>
+    <span>*Required</span>
+  </div>
+  <div class="addl-list">
+    {% for svc in selected_services %}
+      {% for crew in svc.crewDetail %}
+        {% if crew.isExtra or crew.qty > crew.baseQty %}
+        <div class="addl-item">
+          <div class="addl-item-name">{{ crew.role }}{% if crew.isExtra %} (Additional){% endif %}</div>
+          <div class="addl-item-footer">
+            <span class="addl-qty">Qty: {{ crew.qty }}</span>
+            {% if crew.pricePerHead > 0 %}
+            <span class="addl-price">₹ {{ crew.price_display }}</span>
+            {% endif %}
+            <span class="addl-badge">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+              Selected
+            </span>
+          </div>
+        </div>
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- EDITORIAL / HEY SWEETHEARTS -->
+<section class="section" style="background:var(--mauve);padding:0;">
+  <div class="editorial">
+    <div class="editorial-images">
+      <img src="https://images.unsplash.com/photo-1598902108854-10e335adac99?w=500&q=80&fit=crop" alt="Wedding editorial" class="editorial-img-placeholder" style="width:100%;aspect-ratio:3/4;object-fit:cover;display:block;" loading="lazy">
+      <img src="https://images.unsplash.com/photo-1587271407850-8d438ca9fdf2?w=500&q=80&fit=crop" alt="Wedding editorial" style="width:100%;aspect-ratio:3/4;object-fit:cover;display:block;margin-top:30px;" loading="lazy">
+    </div>
+    <div class="editorial-text">
+      <p class="tagline">For weddings in Indian and beyond</p>
+      <h2>Hey Sweethearts!</h2>
+      <div class="sep"></div>
+      <p>Your wedding is more than just an event—it's a beautiful journey filled with emotions, traditions, and unforgettable moments. At Ethereal Frames, we specialize in capturing the essence of your big day, blending artistry with storytelling to preserve every detail with elegance and authenticity.</p>
+      <p>Whether you're celebrating an Indian wedding or a love story that transcends cultures, we are here to document every heartfelt moment.</p>
+      <p>From the intricate details of your bridal attire to the joyful tears of your loved ones, we specialize in preserving the beauty, traditions, and emotions that make your wedding unforgettable. Every frame we capture is a reflection of your unique journey—one that you can cherish for a lifetime.</p>
+    </div>
+  </div>
+</section>
+
+<!-- TERMS & CONDITIONS -->
+<section class="terms-section section">
+  <h2>Terms &amp; Conditions</h2>
+  <ol class="terms-list">
+    <li>40% Advance, 60% 1 week before the event day.</li>
+    <li>You have to submit min. 2TB Hard Disk after the first payment, for your raw data.</li>
+    <li>For Customers who don't collect deliverables within 60 days, we will not hold responsibility for the project or data loss so please collect your data and deliverables at the earliest.</li>
+    <li>All deliverables are given at once (Teaser, Album, Full Length Video).</li>
+    <li>Any Cancellation Advance will be not refunded.</li>
+    <li>You shall arrange for travel and accommodation of our shoot crew for all your events occurring in the places away from our office.</li>
+    <li>Any change of plan or postponement of any event will be accommodated based on our availability on new dates.</li>
+    <li>For requirement of additional sheets in photo book, cost depends on the dimensions of sheet.</li>
+    <li>Soft copies will be given only after 90% of the total payment.</li>
+  </ol>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer section">
+  <div class="footer-logo">
+    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="40" cy="40" r="38" stroke="rgba(255,255,255,0.35)" stroke-width="1"/>
+      <text x="40" y="52" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-family="Cormorant Garamond, serif" font-size="28" font-weight="300">AR</text>
+    </svg>
+    <span class="footer-brand-name">AKASH</span>
+  </div>
+  <div class="footer-gallery">
+    <img src="https://images.unsplash.com/photo-1519741497674-611481863552?w=120&q=70&fit=crop" alt="Gallery thumbnail" style="width:62px;height:62px;object-fit:cover;opacity:0.85;" loading="lazy">
+    <img src="https://images.unsplash.com/photo-1583939411023-14783179e581?w=120&q=70&fit=crop" alt="Gallery thumbnail" style="width:62px;height:62px;object-fit:cover;opacity:0.85;" loading="lazy">
+    <img src="https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=120&q=70&fit=crop" alt="Gallery thumbnail" style="width:62px;height:62px;object-fit:cover;opacity:0.85;" loading="lazy">
+    <img src="https://images.unsplash.com/photo-1591604466107-ec97de577aff?w=120&q=70&fit=crop" alt="Gallery thumbnail" style="width:62px;height:62px;object-fit:cover;opacity:0.85;" loading="lazy">
+  </div>
+  <div class="footer-socials">
+    <a href="#" aria-label="Instagram">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
+    </a>
+    <a href="#" aria-label="YouTube">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.5C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="currentColor" stroke="none"/></svg>
+    </a>
+  </div>
+</footer>
+
+<!-- DOWNLOAD FAB -->
+<!-- <button class="download-fab no-print" onclick="downloadPDF()">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  Download PDF
+</button> -->
+
+<!-- DOWNLOAD FAB -->
+<a class="download-fab no-print"
+   href="{% url 'quotation_pdf' lead.id %}"
+   style="text-decoration:none;display:inline-flex;align-items:center;gap:8px;">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  Download PDF
+</a>
+
+</body>
+</html>

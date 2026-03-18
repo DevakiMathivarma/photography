@@ -282,8 +282,8 @@ document.getElementById("leadForm").addEventListener("submit", function (e) {
     if (!f.email.value.trim()) return showToast("Email is required");
     if (!emailRegex.test(f.email.value.trim())) return showToast("Enter a valid email address");
     if (!f.event_type.value.trim()) return showToast("Event type is required");
-    if (!f.event_start_date.value || !f.event_start_session.value) return showToast("Event start date & session required");
-    if (!f.event_end_date.value || !f.event_end_session.value) return showToast("Event end date & session required");
+    const _pkgDateCheck = window.validatePkgDates ? window.validatePkgDates() : true;
+if (_pkgDateCheck && _pkgDateCheck.error) return showToast(_pkgDateCheck.error);
     if (!f.follow_up_date.value) return showToast("Follow-up date is required");
     if (!f.event_location.value.trim()) return showToast("Event location is required");
     if (!f.total_amount.value) return showToast("Quoted amount is required");
@@ -360,6 +360,11 @@ function injectNewLeadCard(leadId, d) {
     card.className = "card card-new-flash";
     card.draggable = true;
     card.dataset.id = leadId;
+    
+    // ✅ ADD THIS
+    if (d.selected_services?.length) {
+        card.dataset.selectedServices = JSON.stringify(d.selected_services);
+    }
 
     const startDate = d.event_start_date || "";
     const endDate = d.event_end_date || "";
@@ -375,7 +380,7 @@ function injectNewLeadCard(leadId, d) {
         </div>
         <hr>
         <div class="card-row"><span>📅 ${d.event_type}</span></div>
-        <div class="card-row"><span>🗓 ${startDate} ${startSess} – ${endDate} ${endSess}</span></div>
+        <div class="card-row"><span>🗓 ${_buildCardDateLine(d.selected_services || [])}</span></div>
         ${d.follow_up_date ? `<div class="card-row"><span>⏰ ${d.follow_up_date}</span><small>Due</small></div>` : ""}
         ${d.total_amount ? `<div class="card-row"><span>₹ Quoted : ₹ ${Number(d.total_amount).toLocaleString('en-IN')}</span></div>` : ""}
     `;
@@ -1557,6 +1562,20 @@ function openEditLead(leadId) {
                 _pricing.discountAmount = 0;  _pricing.gstRate = 0;
                 _pricing.gstAmount = 0;       _pricing.finalTotal = 0;
             }
+            // ── Restore pkg dates BEFORE renderPackages so _buildDateRow sees them ──
+            window._pkgDates = {};
+            if (Array.isArray(lead.selected_services)) {
+                lead.selected_services.forEach(svc => {
+                    if (svc.key) {
+                        window._pkgDates[svc.key] = {
+                            date:    svc.eventDate    || '',
+                            session: svc.eventSession || '',
+                            tbd:     svc.dateTBD === true || svc.dateTBD === 'true'
+                        };
+                    }
+                });
+            }
+
 
             renderPackages();
 
@@ -1935,6 +1954,540 @@ function renderPackages() {
     const editBtn = document.getElementById('editPkgBtn');
     if (editBtn) editBtn.disabled = _selectedKeys.length === 0;
 }
+// ================================================================
+// PACKAGE DATE PICKER — per-package event dates
+// Add this block to dragdrop.js after the PACKAGE CATALOG section
+// OR load as a separate file after dragdrop.js
+// ================================================================
+
+// ── STATE: per-package dates ─────────────────────────────────────
+// Structure: { [packageKey]: { date: 'YYYY-MM-DD', session: 'Morning'|'Evening' } }
+window._pkgDates = {};
+
+// ── RENDER DATE ROWS ─────────────────────────────────────────────
+// Called every time _selectedKeys changes (after renderSummaryBar)
+function renderPkgDateRows() {
+    // Find or create the date container (placed right after pkgSummaryBar)
+    let wrap = document.getElementById('pkgDatesWrap');
+    if (!wrap) {
+        const bar = document.getElementById('pkgSummaryBar');
+        if (!bar) return;
+        wrap = document.createElement('div');
+        wrap.id = 'pkgDatesWrap';
+        wrap.className = 'pkg-dates-wrap';
+        bar.parentNode.insertBefore(wrap, bar.nextSibling);
+    }
+
+    // Remove rows for deselected packages
+    const existingKeys = [...wrap.querySelectorAll('.pkg-date-row')].map(r => r.dataset.key);
+    existingKeys.forEach(k => {
+        if (!_selectedKeys.includes(k)) {
+            const row = wrap.querySelector(`.pkg-date-row[data-key="${k}"]`);
+            if (row) {
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(10px)';
+                setTimeout(() => row.remove(), 180);
+            }
+            delete window._pkgDates[k];
+        }
+    });
+
+    // Hide wrap if nothing selected
+    if (_selectedKeys.length === 0) {
+        wrap.style.display = 'none';
+        return;
+    }
+    wrap.style.display = 'flex';
+
+    // Add/update rows for selected packages (preserve order)
+    _selectedKeys.forEach((key, idx) => {
+        let row = wrap.querySelector(`.pkg-date-row[data-key="${key}"]`);
+        if (!row) {
+            row = _buildDateRow(key);
+            // Insert at correct position
+            const allRows = [...wrap.querySelectorAll('.pkg-date-row')];
+            if (allRows[idx]) {
+                wrap.insertBefore(row, allRows[idx]);
+            } else {
+                wrap.appendChild(row);
+            }
+            // entrance animation
+            requestAnimationFrame(() => {
+                row.style.transition = 'opacity .22s ease, transform .22s cubic-bezier(.34,1.4,.64,1)';
+                row.style.opacity = '1';
+                row.style.transform = 'translateY(0)';
+            });
+        } else {
+            // Update label in case it changed
+            const lbl = row.querySelector('.pkg-date-card-head .pkg-date-label');
+            if (lbl) lbl.textContent = PACKAGE_CATALOG[key]?.label || key;
+        }
+    });
+}
+
+function _buildDateRow(key) {
+    const pkg   = PACKAGE_CATALOG[key];
+    const saved = window._pkgDates[key] || {};
+    const isTBD = saved.tbd === true;
+
+    const row = document.createElement('div');
+    row.className = 'pkg-date-row' + (isTBD ? ' pkg-date-tbd' : '');
+    row.dataset.key = key;
+    row.style.opacity = '0';
+    row.style.transform = 'translateY(-6px)';
+
+    row.innerHTML = `
+        <div class="pkg-date-card-head">
+            <div class="pkg-date-label">${pkg?.label || key}</div>
+            <div class="pkg-date-head-right">
+                <div class="pkg-conflict-dot hidden" id="pkgcdot-${key}" title="Date conflict detected"></div>
+                <label class="pkg-tbd-toggle" title="Mark date as not yet decided">
+                    <input
+                        type="checkbox"
+                        class="pkg-tbd-check"
+                        id="pkgtbd-${key}"
+                        ${isTBD ? 'checked' : ''}
+                        onchange="onPkgTbdChange('${key}', this.checked)"
+                    >
+                    <span class="pkg-tbd-label">TBD</span>
+                </label>
+            </div>
+        </div>
+        <div class="pkg-date-inputs" id="pkginputs-${key}" ${isTBD ? 'style="display:none"' : ''}>
+            <input
+                type="date"
+                class="pkg-date-input"
+                id="pkgdate-${key}"
+                value="${saved.date || ''}"
+                onchange="onPkgDateChange('${key}', this.value)"
+            >
+            <select
+                class="pkg-session-select"
+                id="pkgsess-${key}"
+                onchange="onPkgSessionChange('${key}', this.value)"
+            >
+                <option value="">Session</option>
+                <option value="Morning" ${saved.session === 'Morning' ? 'selected' : ''}>Morning</option>
+                <option value="Evening" ${saved.session === 'Evening' ? 'selected' : ''}>Evening</option>
+            </select>
+        </div>
+        <div class="pkg-tbd-placeholder" id="pkgtbdph-${key}" ${!isTBD ? 'style="display:none"' : ''}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Date not yet finalized
+        </div>
+    `;
+
+    return row;
+}
+
+// ── DATE / SESSION CHANGE HANDLERS ──────────────────────────────
+function onPkgDateChange(key, value) {
+    if (!window._pkgDates[key]) window._pkgDates[key] = {};
+    window._pkgDates[key].date = value;
+
+    // Fire conflict check only if date is set
+    if (value) {
+        _checkDateConflict(key, value);
+    } else {
+        _clearConflictDot(key);
+    }
+
+    _syncPkgDatesToForm();
+}
+
+function onPkgSessionChange(key, value) {
+    if (!window._pkgDates[key]) window._pkgDates[key] = {};
+    window._pkgDates[key].session = value;
+    _syncPkgDatesToForm();
+}
+
+function onPkgTbdChange(key, isTBD) {
+    if (!window._pkgDates[key]) window._pkgDates[key] = {};
+    window._pkgDates[key].tbd = isTBD;
+
+    const row       = document.querySelector(`.pkg-date-row[data-key="${key}"]`);
+    const inputs    = document.getElementById('pkginputs-' + key);
+    const placeholder = document.getElementById('pkgtbdph-' + key);
+
+    if (isTBD) {
+        // Hide date inputs, show TBD placeholder
+        if (inputs)      { inputs.style.opacity = '0'; setTimeout(() => { inputs.style.display = 'none'; }, 160); }
+        if (placeholder) { placeholder.style.display = 'flex'; requestAnimationFrame(() => { placeholder.style.opacity = '1'; }); }
+        if (row)         { row.classList.add('pkg-date-tbd'); row.classList.remove('has-conflict'); }
+        // Clear any conflict dot
+        _clearConflictDot(key);
+        // Clear date/session so they don't pollute form fields
+        window._pkgDates[key].date    = '';
+        window._pkgDates[key].session = '';
+        const dateInp = document.getElementById('pkgdate-' + key);
+        const sessInp = document.getElementById('pkgsess-' + key);
+        if (dateInp) dateInp.value = '';
+        if (sessInp) sessInp.value = '';
+    } else {
+        // Show date inputs, hide TBD placeholder
+        if (inputs)      { inputs.style.display = 'flex'; inputs.style.opacity = '0'; requestAnimationFrame(() => { inputs.style.opacity = '1'; }); }
+        if (placeholder) { placeholder.style.opacity = '0'; setTimeout(() => { placeholder.style.display = 'none'; }, 160); }
+        if (row)         { row.classList.remove('pkg-date-tbd'); }
+    }
+
+    _syncPkgDatesToForm();
+}
+
+// ── SYNC DATES INTO selectedPackageServices ───────────────────────
+// Called after any date/session change so data flows into form submission
+function _syncPkgDatesToForm() {
+    if (!window.selectedPackageServices) return;
+    window.selectedPackageServices = window.selectedPackageServices.map(svc => {
+        const d = window._pkgDates[svc.key] || {};
+        return {
+            ...svc,
+            eventDate:    d.tbd ? null : (d.date    || null),
+            eventSession: d.tbd ? null : (d.session || null),
+            dateTBD:      d.tbd === true
+        };
+    });
+
+    // Also update _editState so syncSelectedServicesToWindow picks it up
+    _selectedKeys.forEach(key => {
+        const d = window._pkgDates[key] || {};
+        if (_editState[key]) {
+            _editState[key].eventDate    = d.tbd ? null : (d.date    || null);
+            _editState[key].eventSession = d.tbd ? null : (d.session || null);
+            _editState[key].dateTBD      = d.tbd === true;
+        }
+    });
+
+    // Update form's event_start_date / event_end_date using ONLY confirmed (non-TBD) dates.
+    // EARLIEST confirmed date → event_start_date
+    // LATEST confirmed date   → event_end_date
+    // If ALL packages are TBD → clear both fields (blank is valid — sessions page handles it)
+    const confirmedKeys = _selectedKeys.filter(k => {
+        const d = window._pkgDates[k];
+        return d && d.date && !d.tbd;
+    });
+
+    const startInput = document.querySelector('[name="event_start_date"]');
+    const startSess  = document.querySelector('[name="event_start_session"]');
+    const endInput   = document.querySelector('[name="event_end_date"]');
+    const endSess    = document.querySelector('[name="event_end_session"]');
+
+    if (confirmedKeys.length > 0) {
+        const sorted = [...confirmedKeys].sort(
+            (a, b) => window._pkgDates[a].date.localeCompare(window._pkgDates[b].date)
+        );
+        const earliestKey = sorted[0];
+        const latestKey   = sorted[sorted.length - 1];
+
+        if (startInput) startInput.value = window._pkgDates[earliestKey].date;
+        if (startSess)  startSess.value  = window._pkgDates[earliestKey].session || '';
+        if (endInput)   endInput.value   = window._pkgDates[latestKey].date;
+        if (endSess)    endSess.value    = window._pkgDates[latestKey].session   || '';
+    } else if (_selectedKeys.length > 0) {
+        // All packages are TBD — clear legacy date fields
+        if (startInput) startInput.value = '';
+        if (startSess)  startSess.value  = '';
+        if (endInput)   endInput.value   = '';
+        if (endSess)    endSess.value    = '';
+    }
+}
+
+// ── CONFLICT CHECK ───────────────────────────────────────────────
+let _conflictCheckDebounce = {};
+
+function _checkDateConflict(key, date) {
+    clearTimeout(_conflictCheckDebounce[key]);
+    _conflictCheckDebounce[key] = setTimeout(() => {
+        const csrf = document.getElementById('csrf_token')?.value || '';
+        fetch('/leads/check-date-conflict/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrf
+            },
+            body: new URLSearchParams({
+                date: date,
+                exclude_lead_id: document.getElementById('lead_id')?.value || ''
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.conflicts && data.conflicts.length > 0) {
+                _showConflictDot(key);
+                _showDateConflictPopup(key, date, data.conflicts);
+            } else {
+                _clearConflictDot(key);
+            }
+        })
+        .catch(() => { /* silent — don't break form */ });
+    }, 400); // debounce 400ms
+}
+
+function _showConflictDot(key) {
+    const dot = document.getElementById('pkgcdot-' + key);
+    if (dot) dot.classList.remove('hidden');
+    const row = document.querySelector(`.pkg-date-row[data-key="${key}"]`);
+    if (row) row.classList.add('has-conflict');
+}
+
+function _clearConflictDot(key) {
+    const dot = document.getElementById('pkgcdot-' + key);
+    if (dot) dot.classList.add('hidden');
+    const row = document.querySelector(`.pkg-date-row[data-key="${key}"]`);
+    if (row) row.classList.remove('has-conflict');
+}
+
+// ── CONFLICT ALERT POPUP ─────────────────────────────────────────
+let _dcaCurrentKey  = null;
+let _dcaCurrentDate = null;
+
+function _showDateConflictPopup(key, date, conflicts) {
+    _dcaCurrentKey  = key;
+    _dcaCurrentDate = date;
+
+    const overlay = document.getElementById('dcaOverlay');
+    if (!overlay) return;
+
+    // Format date nicely
+    const fmtDate = (() => {
+        try {
+            const dt = new Date(date + 'T00:00:00');
+            return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        } catch { return date; }
+    })();
+
+    const pkgLabel = PACKAGE_CATALOG[key]?.label || key;
+
+    // Fill conflict list
+    const list = document.getElementById('dcaConflictsList');
+    if (list) {
+        list.innerHTML = conflicts.map(c => `
+            <div class="dca-conflict-item">
+                <div class="dca-conflict-dot-lg"></div>
+                <div class="dca-conflict-text">
+                    <div class="dca-conflict-client">${c.client_name}</div>
+                    <div class="dca-conflict-detail">${c.event_type} &nbsp;·&nbsp; ${c.date_display}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Fill summary text
+    const subEl = document.getElementById('dcaSub');
+    if (subEl) {
+        subEl.innerHTML = `<strong>${fmtDate}</strong> is already booked for <strong>${pkgLabel}</strong>. You can still proceed or pick a different date.`;
+    }
+
+    // Show popup
+    overlay.classList.add('show');
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        overlay.querySelector('.dca-card').classList.add('pop');
+    }));
+}
+
+function dcaChangeDate() {
+    // Close popup — admin will manually pick another date
+    _closeDcaPopup();
+    // Focus the date input for this package
+    if (_dcaCurrentKey) {
+        setTimeout(() => {
+            const inp = document.getElementById('pkgdate-' + _dcaCurrentKey);
+            if (inp) { inp.focus(); inp.click(); }
+        }, 320);
+    }
+}
+
+function dcaProceedAnyway() {
+    // Close popup — keep the date, just clear the visual warning
+    _clearConflictDot(_dcaCurrentKey);
+    _closeDcaPopup();
+}
+
+function _closeDcaPopup() {
+    const overlay = document.getElementById('dcaOverlay');
+    if (!overlay) return;
+    overlay.querySelector('.dca-card').classList.remove('pop');
+    setTimeout(() => overlay.classList.remove('show'), 320);
+}
+
+// ── PATCH: hook renderPkgDateRows into existing renderSummaryBar ──
+// We wrap the existing renderSummaryBar so date rows stay in sync
+(function() {
+    const _origRenderSummaryBar = window.renderSummaryBar;
+    if (typeof _origRenderSummaryBar === 'function') {
+        window.renderSummaryBar = function() {
+            _origRenderSummaryBar.apply(this, arguments);
+            renderPkgDateRows();
+        };
+    }
+})();
+
+// ── PATCH: hook into syncSelectedServicesToWindow to carry dates ──
+(function() {
+    const _origSync = window.syncSelectedServicesToWindow;
+    if (typeof _origSync === 'function') {
+        window.syncSelectedServicesToWindow = function() {
+            _origSync.apply(this, arguments);
+            // After sync, push dates + TBD flag into each service object
+            if (window.selectedPackageServices) {
+                window.selectedPackageServices = window.selectedPackageServices.map(svc => {
+                    const d = window._pkgDates[svc.key] || {};
+                    return {
+                        ...svc,
+                        eventDate:    d.tbd ? null : (d.date    || null),
+                        eventSession: d.tbd ? null : (d.session || null),
+                        dateTBD:      d.tbd === true
+                    };
+                });
+            }
+        };
+    }
+})();
+
+// ── PATCH: hook into closeLeadForm to reset date state ───────────
+(function() {
+    const _origClose = window.closeLeadForm;
+    if (typeof _origClose === 'function') {
+        window.closeLeadForm = function() {
+            _origClose.apply(this, arguments);
+            window._pkgDates = {};
+            const wrap = document.getElementById('pkgDatesWrap');
+            if (wrap) wrap.innerHTML = '';
+        };
+    }
+})();
+
+// ── RESTORE DATES when editing a lead ───────────────────────────
+// Called from openEditLead after services are restored.
+// Reads eventDate/eventSession from selected_services JSON.
+function restorePkgDatesFromLead(services) {
+    window._pkgDates = {};
+    if (!Array.isArray(services)) return;
+    services.forEach(svc => {
+        if (svc.key) {
+            // Handle both camelCase variants saved by different code paths
+            const date    = svc.eventDate    || svc.event_date    || '';
+            const session = svc.eventSession || svc.event_session || '';
+            const tbd     = svc.dateTBD === true || svc.dateTBD === 'true' || false;
+            window._pkgDates[svc.key] = { date, session, tbd };
+        }
+    });
+    // Re-render rows with restored values
+    renderPkgDateRows();
+    // Apply values into DOM inputs after rows are built
+    requestAnimationFrame(() => {
+        Object.entries(window._pkgDates).forEach(([key, d]) => {
+            const dateInp = document.getElementById('pkgdate-' + key);
+            const sessInp = document.getElementById('pkgsess-' + key);
+            const tbdInp  = document.getElementById('pkgtbd-'  + key);
+            if (dateInp && d.date)    dateInp.value   = d.date;
+            if (sessInp && d.session) sessInp.value   = d.session;
+            if (tbdInp  && d.tbd)    tbdInp.checked  = true;
+            // Trigger TBD visual state if needed
+            if (d.tbd) onPkgTbdChange(key, true);
+        });
+    });
+}
+
+// ── PATCH openEditLead to restore dates after load ───────────────
+(function() {
+    const _origOpenEditLead = window.openEditLead;
+    if (typeof _origOpenEditLead === 'function') {
+        window.openEditLead = function(leadId) {
+            // Patch fetch inside openEditLead by intercepting renderPackages
+            // which is called after the fetch completes
+            const _origRenderPackages = window.renderPackages;
+            let _restored = false;
+            window.renderPackages = function() {
+                _origRenderPackages.apply(this, arguments);
+                if (!_restored && window.selectedPackageServices && window.selectedPackageServices.length > 0) {
+                    _restored = true;
+                    restorePkgDatesFromLead(window.selectedPackageServices);
+                    window.renderPackages = _origRenderPackages; // restore
+                }
+            };
+            _origOpenEditLead.apply(this, arguments);
+        };
+    }
+})();
+
+// ── Validate dates before form submit ───────────────────────────
+// Rules:
+//   ✅ date + session filled    → valid
+//   ✅ TBD checked              → valid (skip)
+//   ❌ date filled + no session → block ("Pick a session for X")
+//   ⚠  date empty + no TBD     → allowed (soft — not a hard block)
+function validatePkgDates() {
+    if (_selectedKeys.length === 0) return true;
+
+    // Check for date-filled-but-missing-session (hard error)
+    const missingSession = _selectedKeys.filter(k => {
+        const d = window._pkgDates[k];
+        if (!d || d.tbd) return false;          // TBD → skip
+        return d.date && !d.session;             // date set, session missing
+    });
+
+    if (missingSession.length > 0) {
+        const labels = missingSession.map(k => PACKAGE_CATALOG[k]?.label || k).join(', ');
+        missingSession.forEach(k => {
+            const sel = document.getElementById('pkgsess-' + k);
+            if (sel) {
+                sel.style.borderColor = '#ef4444';
+                sel.style.boxShadow   = '0 0 0 3px rgba(239,68,68,.12)';
+                setTimeout(() => { sel.style.borderColor = ''; sel.style.boxShadow = ''; }, 2000);
+            }
+        });
+        return { error: `Please select a session for: ${labels}` };
+    }
+
+    // Warn (but allow) if ALL packages have no date and no TBD
+    const allUndecided = _selectedKeys.every(k => {
+        const d = window._pkgDates[k];
+        return !d || (!d.date && !d.tbd);
+    });
+
+    if (allUndecided && _selectedKeys.length > 0) {
+        // Show a soft amber notice inside the form — do NOT block
+        _showAllTbdNotice();
+    }
+
+    return true; // always allow save
+}
+
+// Soft amber notice when EVERY package is undecided
+function _showAllTbdNotice() {
+    let notice = document.getElementById('pkgAllTbdNotice');
+    if (!notice) {
+        const wrap = document.getElementById('pkgDatesWrap');
+        if (!wrap) return;
+        notice = document.createElement('div');
+        notice.id = 'pkgAllTbdNotice';
+        notice.className = 'pkg-tbd-all-notice';
+        notice.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            No event dates confirmed yet — this lead will be marked as <strong>TBD</strong> in the sessions calendar.
+        `;
+        wrap.parentNode.insertBefore(notice, wrap.nextSibling);
+        // Auto-dismiss after 4s
+        setTimeout(() => {
+            notice.style.opacity = '0';
+            setTimeout(() => notice.remove(), 400);
+        }, 4000);
+    }
+}
+
+
+    const leadForm = document.getElementById('leadForm');
+    if (leadForm) {
+        leadForm.addEventListener('submit', function(e) {
+            // Run before existing validators (capture phase = false, so existing runs first)
+            // Actually we patch the existing submit handler's showToast guard
+            // by checking in the same bubbling phase — the existing submit handler
+            // already calls e.preventDefault(), so we need to inject here.
+        }, false);
+    }
+
+    // Initial render in case packages are pre-selected on page load
+    renderPkgDateRows();
 
 
 // ===============================
@@ -3662,3 +4215,324 @@ function _fmtDate(d) {
         return d;
     }
 }
+function _buildCardDateLine(services) {
+    if (!services || services.length === 0) return '—';
+    
+    return services.map(svc => {
+        const label = svc.label || svc.key;
+        if (svc.dateTBD) return `${label}: TBD`;
+        if (svc.eventDate) {
+            try {
+                const dt = new Date(svc.eventDate + 'T00:00:00');
+                const fmt = dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+                return `${label}: ${fmt}${svc.eventSession ? ' ' + svc.eventSession : ''}`;
+            } catch { return `${label}: ${svc.eventDate}`; }
+        }
+        return `${label}: —`;
+    }).join(' · ');
+}
+
+// ================================================================
+// CARD DATE POPUP
+// Add this block at the END of dragdrop.js
+// (after all existing code, before the closing </script> if inline)
+//
+// What it does:
+//   - Rewrites the date row on every .card to show first date / "TBD"
+//   - Clicking the row opens a small popup listing all package dates
+//   - No existing logic is touched — pure display enhancement
+// ================================================================
+
+(function () {
+
+    // ── Singleton popup element ──────────────────────────────────
+    let _popup = null;
+    let _activeTrigger = null;
+
+    function _getPopup() {
+        if (!_popup) {
+            _popup = document.createElement('div');
+            _popup.className = 'card-dates-popup';
+            _popup.innerHTML = `<div class="cdp-arrow"></div><div class="cdp-inner"></div>`;
+            document.body.appendChild(_popup);
+
+            // Close on outside click
+            document.addEventListener('click', function (e) {
+                if (_popup && !_popup.contains(e.target) &&
+                    _activeTrigger && !_activeTrigger.contains(e.target)) {
+                    _hidePopup();
+                }
+            }, true);
+
+            // Close on scroll
+            document.addEventListener('scroll', _hidePopup, true);
+        }
+        return _popup;
+    }
+
+    function _hidePopup() {
+        if (!_popup) return;
+        _popup.classList.remove('cdp-visible');
+        if (_activeTrigger) _activeTrigger.classList.remove('open');
+        _activeTrigger = null;
+    }
+
+    // ── Show popup anchored below a trigger element ──────────────
+    function _showPopup(triggerEl, services, clientName) {
+        // If same trigger clicked twice → toggle off
+        if (_activeTrigger === triggerEl) {
+            _hidePopup();
+            return;
+        }
+
+        _hidePopup();
+        _activeTrigger = triggerEl;
+        triggerEl.classList.add('open');
+
+        const pop = _getPopup();
+        const inner = pop.querySelector('.cdp-inner');
+        inner.innerHTML = _buildPopupHTML(services, clientName);
+
+        // Position: below trigger
+        document.body.appendChild(pop);
+        const rect = triggerEl.getBoundingClientRect();
+        pop.style.visibility = 'hidden';
+        pop.style.display = 'block';
+
+        // Measure then position
+        requestAnimationFrame(() => {
+            const pw = pop.offsetWidth;
+            const ph = pop.offsetHeight;
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+
+            let top = rect.bottom + 8;
+            let left = rect.left;
+
+            // Flip up if not enough space below
+            if (top + ph > vh - 10) {
+                top = rect.top - ph - 8;
+                pop.querySelector('.cdp-arrow').style.cssText =
+                    `top:auto;bottom:-6px;transform:rotate(225deg);border-radius:0 0 2px 0`;
+            } else {
+                pop.querySelector('.cdp-arrow').style.cssText =
+                    `top:-6px;bottom:auto;transform:rotate(45deg);border-radius:2px 0 0 0`;
+            }
+
+            // Clamp right edge
+            if (left + pw > vw - 12) left = vw - pw - 12;
+            if (left < 8) left = 8;
+
+            pop.style.left = left + 'px';
+            pop.style.top  = top  + 'px';
+            pop.style.visibility = 'visible';
+
+            requestAnimationFrame(() => pop.classList.add('cdp-visible'));
+        });
+    }
+
+    // ── Build popup inner HTML ───────────────────────────────────
+    function _buildPopupHTML(services, clientName) {
+        if (!services || services.length === 0) {
+            return `
+                <div class="cdp-header">
+                    ${_headerIconHTML()}
+                    <div><div class="cdp-header-text">Event Dates</div></div>
+                </div>
+                <div class="cdp-empty">No package dates saved yet</div>
+            `;
+        }
+
+        const rows = services.map(svc => {
+            const label = svc.label || svc.key || '—';
+            const isTBD = svc.dateTBD === true || svc.dateTBD === 'true';
+            const date  = svc.eventDate;
+            const sess  = svc.eventSession;
+
+            let dateHTML = '';
+            if (isTBD) {
+                dateHTML = `<span class="cdp-tbd-badge">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    TBD
+                </span>`;
+            } else if (date) {
+                const fmt = _fmtDateShort(date);
+                const sessHTML = sess
+                    ? `<span class="cdp-session-pill">${sess}</span>`
+                    : '';
+                dateHTML = `<span class="cdp-date-val">${fmt}${sessHTML}</span>`;
+            } else {
+                dateHTML = `<span style="color:#9ca3af;font-size:11px">No date set</span>`;
+            }
+
+            return `
+                <div class="cdp-row">
+                    <div class="cdp-dot ${isTBD ? 'cdp-dot--tbd' : ''}"></div>
+                    <div class="cdp-row-content">
+                        <div class="cdp-pkg-label">${label}</div>
+                        ${dateHTML}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        const confirmedCount = services.filter(s => !s.dateTBD && s.eventDate).length;
+        const subText = confirmedCount === services.length
+            ? `${confirmedCount} date${confirmedCount !== 1 ? 's' : ''} confirmed`
+            : `${confirmedCount} of ${services.length} confirmed`;
+
+        return `
+            <div class="cdp-header">
+                ${_headerIconHTML()}
+                <div>
+                    <div class="cdp-header-text">Event Dates</div>
+                    <div class="cdp-header-sub">${subText}</div>
+                </div>
+            </div>
+            ${rows}
+        `;
+    }
+
+    function _headerIconHTML() {
+        return `
+            <div class="cdp-header-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8"  y1="2" x2="8"  y2="6"/>
+                    <line x1="3"  y1="10" x2="21" y2="10"/>
+                </svg>
+            </div>
+        `;
+    }
+
+    function _fmtDateShort(d) {
+        try {
+            const dt = new Date(d + 'T00:00:00');
+            return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        } catch { return d; }
+    }
+
+    // ── Get first display date for card row ──────────────────────
+    function _getFirstDateDisplay(services) {
+        if (!services || services.length === 0) return null;
+
+        // First confirmed (non-TBD) date
+        const confirmed = services.filter(s => !s.dateTBD && s.eventDate);
+        if (confirmed.length > 0) {
+            // Sort by date
+            confirmed.sort((a, b) => a.eventDate.localeCompare(b.eventDate));
+            const s = confirmed[0];
+            return _fmtDateShort(s.eventDate) + (s.eventSession ? ' · ' + s.eventSession : '');
+        }
+
+        // All TBD
+        if (services.every(s => s.dateTBD)) {
+            return 'All dates TBD';
+        }
+
+        return null; // fall back to legacy event_start_date
+    }
+
+    // ── Patch a single card's date row ───────────────────────────
+    function _patchCardDateRow(card) {
+        // Already patched?
+        if (card.dataset.datePatchDone === '1') return;
+
+        // Read selected_services from the data attribute we'll add,
+        // OR fall back to global window.selectedPackageServices if this is
+        // the card being built right now (injectNewLeadCard path).
+        let services = null;
+        try {
+            const raw = card.dataset.selectedServices;
+            if (raw) services = JSON.parse(raw);
+        } catch (e) {}
+
+        if (!services || services.length === 0) return;
+
+        // Check if any has eventDate or dateTBD set
+        const hasDateData = services.some(s => s.eventDate || s.dateTBD);
+        if (!hasDateData) return;
+
+        // Find the calendar date row — the one with the 📅 or calendar svg img
+        const rows = card.querySelectorAll('.card-row');
+        let dateRow = null;
+        rows.forEach(r => {
+            const text = r.innerText || '';
+            // Identify it by presence of session keywords or date pattern
+            if (
+                r.querySelector('img[src*="calender"]') ||
+                r.querySelector('img[src*="calendar"]') ||
+                /\d{4}[-/]\d{2}[-/]\d{2}/.test(text) ||
+                /Morning|Evening/.test(text) ||
+                text.includes('–') ||
+                text.includes('TBD')
+            ) {
+                dateRow = r;
+            }
+        });
+
+        if (!dateRow) return;
+
+        const firstDisplay = _getFirstDateDisplay(services);
+        const calSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;opacity:0.6"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+        const chevronSvg = `<svg class="cdt-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+
+        // Preserve any leading <img> the template puts in
+        const existingImg = dateRow.querySelector('img');
+        const imgHTML = existingImg ? existingImg.outerHTML : calSvg;
+
+        // Replace row contents with trigger
+        dateRow.innerHTML = `
+            <div class="card-date-trigger" role="button" tabindex="0" aria-label="View event dates">
+                ${imgHTML}
+                <span class="cdt-main">${firstDisplay || dateRow.innerText.trim() || '—'}</span>
+                ${chevronSvg}
+            </div>
+        `;
+
+        const trigger = dateRow.querySelector('.card-date-trigger');
+        trigger.addEventListener('click', function (e) {
+            e.stopPropagation();
+            _showPopup(trigger, services, card.querySelector('.card-title')?.textContent?.trim());
+        });
+        trigger.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                _showPopup(trigger, services, card.querySelector('.card-title')?.textContent?.trim());
+            }
+        });
+
+        card.dataset.datePatchDone = '1';
+    }
+
+    // ── Patch all cards currently in DOM ─────────────────────────
+    function patchAllCards() {
+        document.querySelectorAll('.card[data-selected-services]').forEach(_patchCardDateRow);
+    }
+
+    // ── Expose so injectNewLeadCard can call after building ──────
+    window._patchCardDateRow = _patchCardDateRow;
+    window._patchAllCards    = patchAllCards;
+
+    // ── Run on DOM ready ─────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', patchAllCards);
+
+    // ── MutationObserver: patch cards injected dynamically ───────
+    const _cardObserver = new MutationObserver(mutations => {
+        mutations.forEach(m => {
+            m.addedNodes.forEach(node => {
+                if (node.nodeType === 1) {
+                    if (node.classList && node.classList.contains('card') && node.dataset.selectedServices) {
+                        _patchCardDateRow(node);
+                    }
+                    node.querySelectorAll && node.querySelectorAll('.card[data-selected-services]')
+                        .forEach(_patchCardDateRow);
+                }
+            });
+        });
+    });
+    _cardObserver.observe(document.body, { childList: true, subtree: true });
+
+})();

@@ -735,3 +735,633 @@ function formatPhase(phase) {
                 .replace(/\b\w/g, c => c.toUpperCase());
 }
 
+// ================================================================
+// crew_planning.js  — v2 (all bugs fixed)
+//
+// FIXES:
+//  1. Role labels under circles now show short abbr (TP, TV, CP..)
+//     Full name shown as tooltip on hover
+//  2. Slot assignment uses slot_id as key (not role code)
+//     so duplicate roles (2x TP) are tracked independently
+//  3. Same member cannot be assigned to two slots — once picked,
+//     they are greyed out across all member grids
+//  4. Role name normalisation: teamRoles may contain full names
+//     ("Traditional Photographer") or codes ("TP") — both handled
+// ================================================================
+// ================================================================
+// crew_planning.js  — v2 (all bugs fixed)
+//
+// FIXES:
+//  1. Role labels under circles now show short abbr (TP, TV, CP..)
+//     Full name shown as tooltip on hover
+//  2. Slot assignment uses slot_id as key (not role code)
+//     so duplicate roles (2x TP) are tracked independently
+//  3. Same member cannot be assigned to two slots — once picked,
+//     they are greyed out across all member grids
+//  4. Role name normalisation: teamRoles may contain full names
+//     ("Traditional Photographer") or codes ("TP") — both handled
+// ================================================================
+
+// ── ROLE CODE ↔ LABEL MAP ─────────────────────────────────────────
+const ROLE_LABEL = {
+    "TP": "Traditional Photographer",
+    "CP": "Candid Photographer",
+    "TV": "Traditional Videographer",
+    "CV": "Candid Videographer",
+    "CI": "Cinematic Videographer",
+    "DR": "Drone Operator",
+    "PH": "Photographer",
+    "VG": "Videographer",
+};
+
+// Reverse map: full name → code
+const ROLE_CODE = {};
+Object.entries(ROLE_LABEL).forEach(([code, label]) => { ROLE_CODE[label] = code; });
+
+// Normalise whatever comes from teamRoles → always return the CODE ("TP" etc.)
+function _normaliseRole(raw) {
+    if (!raw) return raw;
+    const trimmed = raw.trim();
+    if (ROLE_LABEL[trimmed]) return trimmed;         // already a code
+    if (ROLE_CODE[trimmed])  return ROLE_CODE[trimmed]; // full name → code
+    return trimmed;                                  // unknown, return as-is
+}
+
+function _roleLabel(code) {
+    return ROLE_LABEL[_normaliseRole(code)] || code;
+}
+
+
+// ── STATE ─────────────────────────────────────────────────────────
+let _cpProjectId   = null;
+let _cpData        = null;
+// KEY CHANGE: keyed by slot_id (unique per circle), NOT by role code
+// _cpAssignments[slot_id] = { crew_member_id, name, initials, role }
+let _cpAssignments = {};
+let _cpActiveSlot  = null;
+let _autoResult    = null;
+
+
+// ── CSRF ──────────────────────────────────────────────────────────
+function _csrf() {
+    return document.getElementById('csrf_token')?.value || '';
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────
+function showCrewToast(msg, type = 'info') {
+    const t = document.getElementById('crewToast');
+    if (!t) return;
+    t.textContent = msg;
+    t.className = `crew-toast crew-toast--${type}`;
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+// ── All crew member IDs already assigned to ANY slot ─────────────
+function _usedMemberIds() {
+    return new Set(Object.values(_cpAssignments).map(a => a.crew_member_id));
+}
+
+
+// ================================================================
+// STEP 1: OPEN ASSIGN MODE CHOOSER
+// ================================================================
+document.addEventListener('click', e => {
+    const btn = e.target.closest('.assign-crew-btn');
+    if (!btn) return;
+
+    _cpProjectId = btn.dataset.project;
+    const client = btn.dataset.client || '';
+    const event  = btn.dataset.event  || '';
+
+    const label = document.getElementById('amEventLabel');
+    if (label) label.textContent = `${event} — ${client}`;
+
+    const overlay = document.getElementById('assignModeOverlay');
+    overlay.style.display = 'flex';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        overlay.querySelector('.am-card').classList.add('am-pop');
+    }));
+});
+
+function closeAssignMode() {
+    const overlay = document.getElementById('assignModeOverlay');
+    overlay.querySelector('.am-card').classList.remove('am-pop');
+    setTimeout(() => { overlay.style.display = 'none'; }, 260);
+}
+
+
+// ================================================================
+// STEP 2A: AUTO ASSIGN
+// ================================================================
+function triggerAutoAssign() {
+    closeAssignMode();
+
+    const overlay    = document.getElementById('autoAssignOverlay');
+    const body       = document.getElementById('autoAssignBody');
+    const confirmBtn = document.getElementById('confirmAutoBtn');
+
+    confirmBtn.style.display = 'none';
+    body.innerHTML = `
+        <div class="aa-loading">
+            <div class="aa-spinner"></div>
+            <p>Checking crew availability...</p>
+        </div>`;
+
+    overlay.style.display = 'flex';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        overlay.querySelector('.cp-modal').classList.add('cp-pop');
+    }));
+
+    fetch('/crew/auto-assign/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': _csrf(), 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ project_id: _cpProjectId })
+    })
+    .then(r => r.json())
+    .then(data => { _autoResult = data; _renderAutoResult(data); })
+    .catch(() => {
+        body.innerHTML = `<div class="aa-error">Failed to contact server. Please try again.</div>`;
+    });
+}
+
+function _renderAutoResult(data) {
+    const body       = document.getElementById('autoAssignBody');
+    const confirmBtn = document.getElementById('confirmAutoBtn');
+    const sub        = document.getElementById('autoAssignSub');
+
+    if (!data.success) {
+        body.innerHTML = `<div class="aa-error">${data.error || 'Auto-assign failed'}</div>`;
+        return;
+    }
+
+    const assigned = data.assigned || [];
+    const failed   = data.failed   || [];
+
+    sub.textContent = `${assigned.length} crew assigned${failed.length ? `, ${failed.length} role(s) unavailable` : ''}`;
+
+    let html = '';
+
+    if (assigned.length > 0) {
+        html += `<div class="aa-section-label">✓ Assigned</div><div class="aa-crew-grid">`;
+        assigned.forEach(m => {
+            const code  = _normaliseRole(m.role_slot || m.role);
+            const label = _roleLabel(code);
+            html += `
+                <div class="aa-crew-card">
+                    <div class="aa-avatar">${m.initials}</div>
+                    <div class="aa-crew-info">
+                        <div class="aa-crew-name">${m.name}</div>
+                        <div class="aa-crew-role">${label}</div>
+                    </div>
+                    <div class="aa-slot-badge" title="${label}">${code}</div>
+                </div>`;
+        });
+        html += `</div>`;
+    }
+
+    if (failed.length > 0) {
+        html += `<div class="aa-section-label aa-section-label--warn">⚠ No availability found</div>`;
+        failed.forEach(f => {
+            const code  = _normaliseRole(f.role_slot || f.role);
+            const label = _roleLabel(code);
+            html += `<div class="aa-failed-row">
+                <span class="aa-slot-badge aa-slot-badge--warn" title="${label}">${code}</span>
+                <span>${label} — ${f.reason}</span>
+            </div>`;
+        });
+    }
+
+    body.innerHTML = html || `<div class="cp-empty">No role slots found for this project</div>`;
+    if (assigned.length > 0) confirmBtn.style.display = 'inline-flex';
+}
+
+function confirmAutoAssign() {
+    if (!_autoResult || !_autoResult.assigned) return;
+    _updateCardSlots(_cpProjectId, _autoResult.assigned);
+    closeAutoAssign();
+    showCrewToast(`✓ ${_autoResult.assigned.length} crew members assigned`, 'success');
+}
+
+function closeAutoAssign() {
+    const overlay = document.getElementById('autoAssignOverlay');
+    overlay.querySelector('.cp-modal').classList.remove('cp-pop');
+    setTimeout(() => { overlay.style.display = 'none'; }, 280);
+}
+
+
+// ================================================================
+// STEP 2B: MANUAL ASSIGN — CREW PLANNING POPUP
+// ================================================================
+function triggerManualAssign() {
+    closeAssignMode();
+
+    const overlay = document.getElementById('crewPlanningOverlay');
+    const sub     = document.getElementById('cpSubTitle');
+    sub.textContent = 'Loading crew data...';
+
+    _cpActiveSlot  = null;
+    _cpAssignments = {};
+
+    overlay.style.display = 'flex';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        overlay.querySelector('.cp-modal').classList.add('cp-pop');
+    }));
+
+    fetch(`/crew/planning/${_cpProjectId}/`)
+        .then(r => r.json())
+        .then(data => {
+            _cpData = data;
+            sub.textContent = `${data.event_type} — ${data.client_name}`;
+            _buildCrewPlanningUI(data);
+        })
+        .catch(() => showCrewToast('Failed to load crew data', 'error'));
+}
+
+function _buildCrewPlanningUI(data) {
+    const dateEl = document.getElementById('cpDateDisplay');
+    const sessEl = document.getElementById('cpSessionDisplay');
+    if (dateEl) dateEl.textContent = data.date_display || '—';
+    if (sessEl) sessEl.textContent = data.event_session || '—';
+
+    // ── Normalise role_slots (codes or full names → always codes) ─
+    _cpData.role_slots = (data.role_slots || []).map((slot, idx) => {
+        const code = _normaliseRole(slot.role || slot.role_slot || slot);
+        return {
+            role:       code,
+            role_label: _roleLabel(code),
+            slot_index: slot.slot_index ?? idx,
+            slot_id:    slot.slot_id || `${code}_${slot.slot_index ?? idx}`,
+        };
+    });
+
+    // ── Pre-fill existing assignments keyed by slot_id ────────────
+    _cpAssignments = {};
+    const existing       = data.current_assignments || {};
+    const roleSlotCounts = {};
+
+    _cpData.role_slots.forEach(slot => {
+        const n            = roleSlotCounts[slot.role] || 0;
+        roleSlotCounts[slot.role] = n + 1;
+
+        const membersForRole = existing[slot.role] || [];
+        const member         = membersForRole[n];
+        if (member) {
+            _cpAssignments[slot.slot_id] = {
+                crew_member_id: member.id,
+                name:           member.name,
+                initials:       member.initials || member.name.slice(0,2).toUpperCase(),
+                role:           slot.role,
+            };
+        }
+    });
+
+    _buildSlotCircles();
+    _buildMemberGrid('cpMembersAvailable', data.available_groups, false);
+    _buildMemberGrid('cpMembersBooked',    data.booked_groups,    true);
+}
+
+
+// ── Build role slot circles ────────────────────────────────────────
+function _buildSlotCircles() {
+    const row = document.getElementById('cpSlotsRow');
+    if (!row || !_cpData) return;
+    row.innerHTML = '';
+
+    _cpData.role_slots.forEach(slot => {
+        const assigned = _cpAssignments[slot.slot_id];
+
+        const circle = document.createElement('div');
+        circle.className = 'cp-slot-circle' + (assigned ? ' cp-slot-filled' : '');
+        circle.dataset.slotId = slot.slot_id;
+        circle.dataset.role   = slot.role;
+        circle.title          = slot.role_label; // full name tooltip
+
+        if (assigned) {
+            circle.innerHTML = `
+                <div class="cp-slot-avatar">${assigned.initials}</div>
+                <button class="cp-slot-remove" onclick="removeSlotAssignment('${slot.slot_id}', event)">✕</button>`;
+        } else {
+            circle.innerHTML = `<div class="cp-slot-plus">+</div>`;
+        }
+
+        // Short label = code only (TP, CV etc.)
+        const label = document.createElement('div');
+        label.className   = 'cp-slot-label';
+        label.textContent = slot.role;
+        label.title       = slot.role_label;
+
+        const wrap = document.createElement('div');
+        wrap.className = 'cp-slot-wrap';
+        wrap.appendChild(circle);
+        wrap.appendChild(label);
+
+        circle.addEventListener('click', () => _selectSlot(slot));
+        row.appendChild(wrap);
+    });
+}
+
+
+// ── Select a slot ─────────────────────────────────────────────────
+function _selectSlot(slot) {
+    _cpActiveSlot = slot;
+
+    document.querySelectorAll('.cp-slot-circle').forEach(c => c.classList.remove('cp-slot-active'));
+    const activeCircle = document.querySelector(`.cp-slot-circle[data-slot-id="${slot.slot_id}"]`);
+    if (activeCircle) activeCircle.classList.add('cp-slot-active');
+
+    const lbl = document.getElementById('cpActiveSlotLabel');
+    if (lbl) {
+        lbl.textContent  = `Assigning: ${slot.role_label}`;
+        lbl.style.display = 'block';
+        lbl.style.color   = '#8B1A1A';
+    }
+
+    switchCpTab('available', document.querySelector('.cp-tab[data-cptab="available"]'));
+
+    const groupEl = document.getElementById(`cpGroup-${slot.role}`);
+    if (groupEl) {
+        groupEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        groupEl.classList.add('cp-group-highlight');
+        setTimeout(() => groupEl.classList.remove('cp-group-highlight'), 1200);
+    }
+}
+
+
+// ── Build member grid ──────────────────────────────────────────────
+function _buildMemberGrid(containerId, groups, isBooked) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!groups || groups.length === 0) {
+        container.innerHTML = `<div class="cp-empty">No members found</div>`;
+        return;
+    }
+
+    const usedIds = _usedMemberIds();
+
+    groups.forEach(group => {
+        const roleCode  = _normaliseRole(group.role);
+        const roleLabel = _roleLabel(roleCode);
+
+        const section = document.createElement('div');
+        section.className = 'cp-role-group';
+        section.id        = `cpGroup-${roleCode}`;
+        section.innerHTML = `<div class="cp-role-group-label">${roleLabel}</div>`;
+
+        const pillsRow = document.createElement('div');
+        pillsRow.className = 'cp-pills-row';
+
+        group.members.forEach(m => {
+            const pill = document.createElement('div');
+            pill.className    = 'cp-member-pill' + (isBooked ? ' cp-member-pill--booked' : '');
+            pill.dataset.id   = m.id;
+            pill.dataset.role = roleCode;
+
+            if (usedIds.has(m.id)) pill.classList.add('cp-member-pill--assigned');
+
+            const nameParts = m.name.split(' ');
+            const first     = nameParts[0] || '';
+            const last      = nameParts.slice(1).join(' ');
+
+            pill.innerHTML = `
+                <div class="cp-member-avatar">${m.initials || m.name.slice(0,2).toUpperCase()}</div>
+                <div class="cp-member-name">
+                    ${first}
+                    ${last ? `<br><span style="font-size:10px;opacity:.65">${last}</span>` : ''}
+                </div>
+                ${isBooked ? '<div class="cp-booked-badge">Booked</div>' : ''}`;
+
+            if (!isBooked) {
+                pill.addEventListener('click', () => _assignMemberToSlot(m, roleCode));
+            } else {
+                pill.title = 'Already booked on another event on the same date';
+            }
+
+            pillsRow.appendChild(pill);
+        });
+
+        section.appendChild(pillsRow);
+        container.appendChild(section);
+    });
+}
+
+
+// ── Assign a member to the active slot ───────────────────────────
+function _assignMemberToSlot(member, memberRole) {
+    if (!_cpActiveSlot) {
+        showCrewToast('Please click a role slot (circle) first', 'warn');
+        return;
+    }
+
+    // Block if member already used in another slot
+    if (_usedMemberIds().has(member.id)) {
+        showCrewToast(`${member.name.split(' ')[0]} is already assigned to another role`, 'warn');
+        return;
+    }
+
+    if (memberRole !== _cpActiveSlot.role) {
+        showCrewToast(`Assigning ${member.name.split(' ')[0]} (${memberRole}) → ${_cpActiveSlot.role} slot`, 'warn');
+    }
+
+    // KEY IS slot_id — so 2x TP slots each get their own entry
+    _cpAssignments[_cpActiveSlot.slot_id] = {
+        crew_member_id: member.id,
+        name:           member.name,
+        initials:       member.name.slice(0, 2).toUpperCase(),
+        role:           _cpActiveSlot.role,
+        slot_id:        _cpActiveSlot.slot_id,
+    };
+
+    _buildSlotCircles();
+
+    // Re-apply active highlight after rebuild
+    const circle = document.querySelector(`.cp-slot-circle[data-slot-id="${_cpActiveSlot.slot_id}"]`);
+    if (circle) circle.classList.add('cp-slot-active');
+
+    // Grey out this member everywhere
+    document.querySelectorAll(`.cp-member-pill[data-id="${member.id}"]`).forEach(p => {
+        p.classList.add('cp-member-pill--assigned');
+    });
+
+    // Auto-advance to next unfilled slot
+    const unfilled = _cpData.role_slots.find(s => !_cpAssignments[s.slot_id]);
+    if (unfilled) {
+        setTimeout(() => _selectSlot(unfilled), 180);
+    } else {
+        const lbl = document.getElementById('cpActiveSlotLabel');
+        if (lbl) { lbl.textContent = '✓ All roles assigned!'; lbl.style.color = '#16a34a'; }
+    }
+}
+
+
+// ── Remove a slot assignment ──────────────────────────────────────
+function removeSlotAssignment(slotId, e) {
+    if (e) e.stopPropagation();
+
+    const a = _cpAssignments[slotId];
+    if (a) {
+        document.querySelectorAll(`.cp-member-pill[data-id="${a.crew_member_id}"]`).forEach(p => {
+            p.classList.remove('cp-member-pill--assigned');
+        });
+    }
+    delete _cpAssignments[slotId];
+    _buildSlotCircles();
+}
+
+
+// ── Switch available / booked tab ─────────────────────────────────
+function switchCpTab(tab, btn) {
+    document.querySelectorAll('.cp-tab').forEach(t => t.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    const avail  = document.getElementById('cpMembersAvailable');
+    const booked = document.getElementById('cpMembersBooked');
+
+    if (tab === 'available') {
+        if (avail)  avail.style.display  = 'block';
+        if (booked) booked.style.display = 'none';
+    } else {
+        if (avail)  avail.style.display  = 'none';
+        if (booked) booked.style.display = 'block';
+    }
+}
+
+
+// ── Save manual assignments ────────────────────────────────────────
+function saveManualCrew() {
+    const assignments = Object.entries(_cpAssignments).map(([slot_id, a]) => ({
+        crew_member_id: a.crew_member_id,
+        role_slot:      a.role,
+        slot_id:        slot_id,
+    }));
+
+    if (assignments.length === 0) {
+        showCrewToast('No assignments to save', 'warn');
+        return;
+    }
+
+    fetch('/crew/save-manual/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': _csrf(), 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            project_id:  _cpProjectId,
+            assignments: JSON.stringify(assignments)
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const crewForCard = assignments.map(a => ({
+                id:        a.crew_member_id,
+                name:      _cpAssignments[a.slot_id]?.name || '',
+                initials:  _cpAssignments[a.slot_id]?.initials || '',
+                role_slot: a.role_slot,
+                slot_id:   a.slot_id,
+            }));
+            _updateCardSlots(_cpProjectId, crewForCard);
+            closeCrewPlanning();
+            showCrewToast(`✓ ${assignments.length} crew members assigned and notified`, 'success');
+        } else {
+            showCrewToast(data.error || 'Save failed', 'error');
+        }
+    })
+    .catch(() => showCrewToast('Network error', 'error'));
+}
+
+function closeCrewPlanning() {
+    const overlay = document.getElementById('crewPlanningOverlay');
+    overlay.querySelector('.cp-modal').classList.remove('cp-pop');
+    setTimeout(() => { overlay.style.display = 'none'; }, 280);
+    _cpActiveSlot = null;
+    const lbl = document.getElementById('cpActiveSlotLabel');
+    if (lbl) { lbl.style.display = 'none'; lbl.style.color = ''; }
+}
+
+
+// ================================================================
+// UPDATE CARD SLOT CIRCLES ON THE SESSIONS PAGE
+// ================================================================
+function _updateCardSlots(projectId, crewList) {
+    const container = document.getElementById(`crew-slots-${projectId}`);
+    if (!container) return;
+
+    // Build map: role_code → queue of members (for duplicate roles)
+    const roleQueue = {};
+    crewList.forEach(c => {
+        const code = _normaliseRole(c.role_slot || c.role);
+        if (!roleQueue[code]) roleQueue[code] = [];
+        roleQueue[code].push(c);
+    });
+
+    const rolePointers = {};
+
+    container.querySelectorAll('.crew-slot').forEach(slot => {
+        const code   = _normaliseRole(slot.dataset.role);
+        const idx    = rolePointers[code] || 0;
+        const queue  = roleQueue[code] || [];
+        const member = queue[idx];
+
+        // Wrap in .crew-slot-wrap if not already wrapped
+        if (!slot.parentElement.classList.contains('crew-slot-wrap')) {
+            const wrap = document.createElement('div');
+            wrap.className = 'crew-slot-wrap';
+            slot.parentNode.insertBefore(wrap, slot);
+            wrap.appendChild(slot);
+        }
+        const wrap = slot.parentElement;
+
+        // Remove any existing tooltip
+        const existing = wrap.querySelector('.slot-tooltip');
+        if (existing) existing.remove();
+
+        if (member) {
+            slot.classList.remove('empty');
+            slot.classList.add('filled');
+            const initials  = member.initials || (member.name || '').slice(0,2).toUpperCase();
+            const fullName  = member.name || '';
+            const roleLabel = (typeof _roleLabel === 'function') ? _roleLabel(code) : code;
+            slot.innerHTML  = `<span class="slot-avatar">${initials}</span>`;
+            slot.title      = '';  // cleared — tooltip handles this now
+
+            // Inject tooltip
+            const tooltip = document.createElement('div');
+            tooltip.className = 'slot-tooltip';
+            tooltip.innerHTML = `
+                <div class="slot-tooltip-name">${fullName}</div>
+                <div class="slot-tooltip-role">${roleLabel}</div>`;
+            wrap.appendChild(tooltip);
+
+            rolePointers[code] = idx + 1;
+        } else {
+            // Empty slot tooltip showing role name
+            const roleLabel = (typeof _roleLabel === 'function') ? _roleLabel(code) : code;
+            const tooltip   = document.createElement('div');
+            tooltip.className = 'slot-tooltip slot-tooltip--empty';
+            tooltip.innerHTML = `<div class="slot-tooltip-name">${roleLabel}</div>`;
+            wrap.appendChild(tooltip);
+        }
+    });
+
+    const btn = document.querySelector(`.assign-crew-btn[data-project="${projectId}"]`);
+    if (btn) btn.textContent = '✎ Edit Team';
+}
+
+
+// ================================================================
+// ON PAGE LOAD — populate slot circles from existing DB assignments
+// ================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.crew-slots[data-project]').forEach(container => {
+        const projectId = container.dataset.project;
+        fetch(`/crew/project/${projectId}/`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.crew && data.crew.length > 0) {
+                    _updateCardSlots(projectId, data.crew);
+                }
+            })
+            .catch(() => {});
+    });
+});
