@@ -4,6 +4,7 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/leads.css' %}">
+<link rel="stylesheet" href="{% static 'css/avail_calendar.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
     integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
     crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -194,7 +195,7 @@
         <div class="column" data-status="NEW">
             <div class="column-head new"><span class="label">● NEW </span><span class="count">{{ new_leads|length }}</span></div>
             {% for lead in new_leads %}
-            <div class="card" draggable="true" data-id="{{ lead.id }}" data-selected-services="{{ lead.selected_services_json }}">
+            <div class="card" draggable="true" data-id="{{ lead.id }}" data-selected-services="{{ lead.selected_services_json }}" data-event-start="{{ lead.event_start_date }}" data-event-end="{{ lead.event_end_date }}" data-event-type="{{ lead.event_type }}" data-client="{{ lead.client_name }}" data-status="NEW">
                 <div class="card-title">
                     {{ lead.client_name }}
                     <button class="edit-btn" onclick="openEditLead({{ lead.id }})" title="Edit Lead"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -226,7 +227,7 @@
         <div class="column" data-status="FOLLOW_UP">
             <div class="column-head follow"><span class="label">● FOLLOW UP</span><span class="count">{{ follow_up|length }}</span></div>
             {% for lead in follow_up %}
-            <div class="card" draggable="true" data-id="{{ lead.id }}" data-selected-services="{{ lead.selected_services_json }}">
+            <div class="card" draggable="true" data-id="{{ lead.id }}" data-selected-services="{{ lead.selected_services_json }}" data-event-start="{{ lead.event_start_date }}" data-event-end="{{ lead.event_end_date }}" data-event-type="{{ lead.event_type }}" data-client="{{ lead.client_name }}" data-status="FOLLOW_UP">
                 <div class="card-title">
                     {{ lead.client_name }}
                     <button class="edit-btn" onclick="openEditLead({{ lead.id }})" title="Edit Lead"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -240,14 +241,11 @@
             {% endfor %}
         </div>
 
-        <div class="column" data-status="ACCEPTED" data-selected-services="{{ lead.selected_services_json }}">
+        <div class="column" data-status="ACCEPTED">
             <div class="column-head accepted"><span class="label">● ACCEPTED</span><span class="count">{{ accepted|length }}</span></div>
             {% for lead in accepted %}
-            <div class="card" draggable="true" data-id="{{ lead.id }}">
-                <div class="card-title">
-                    {{ lead.client_name }}
-                   
-                </div>
+            <div class="card" draggable="true" data-id="{{ lead.id }}" data-event-start="{{ lead.event_start_date }}" data-event-end="{{ lead.event_end_date }}" data-event-type="{{ lead.event_type }}" data-client="{{ lead.client_name }}" data-status="ACCEPTED">
+                <div class="card-title">{{ lead.client_name }}</div>
                 <hr>
                 <div class="card-row"><img src="{% static 'images/event.svg' %}"><span>{{ lead.event_type }}</span></div>
                 <div class="card-row"><img src="{% static 'images/calender.svg' %}"><span>{{ lead.event_start_date }} {{ lead.event_start_session }} – {{ lead.event_end_date }} {{ lead.event_end_session }}</span></div>
@@ -257,10 +255,10 @@
             {% endfor %}
         </div>
 
-        <div class="column" data-status="LOST" data-selected-services="{{ lead.selected_services_json }}">
+        <div class="column" data-status="LOST">
             <div class="column-head lost"><span class="label">● LOST</span><span class="count">{{ lost|length }}</span></div>
             {% for lead in lost %}
-            <div class="card" draggable="true" data-id="{{ lead.id }}">
+            <div class="card" draggable="true" data-id="{{ lead.id }}" data-event-start="{{ lead.event_start_date }}" data-event-end="{{ lead.event_end_date }}" data-event-type="{{ lead.event_type }}" data-client="{{ lead.client_name }}" data-status="LOST">
                 <div class="card-title">{{ lead.client_name }}</div>
                 <hr>
                 <div class="card-row"><img src="{% static 'images/event.svg' %}"><span>{{ lead.event_type }}</span></div>
@@ -271,137 +269,159 @@
     </div>
 </div>
 
-<!-- ── NEW LEAD MODAL ───────────────────────────────────────────── -->
+<!-- ══════════════════════════════════════════════════════════════
+     NEW LEAD MODAL — SINGLE STEP (Client Details removed,
+     name/phone/email moved into Leads Details left column)
+══════════════════════════════════════════════════════════════ -->
 <div class="lead-modal" id="leadModal">
-    <div class="lead-form">
+    <div class="lead-form step-wide">
         <button class="close-btn" onclick="closeLeadForm()">×</button>
         <div class="form-toast" id="formToast"></div>
-        <div class="progress-wrapper">
-            <div class="progress-line"></div>
-            <div class="progress-step active"><span>1</span><p>Client</p></div>
-            <div class="progress-step"><span>2</span><p>Event</p></div>
-        </div>
+
         <form id="leadForm">
             {% csrf_token %}
             <input type="hidden" name="lead_id" id="lead_id">
 
-            <!-- STEP 1: Client Details -->
-            <div class="form-step active">
-                <h3>Client Details</h3>
-                <input type="text" name="client_name" placeholder="Client Name" required>
-                <input type="text" name="phone" placeholder="Phone Number" required>
-                <input type="email" name="email" placeholder="Email">
-                <button type="button" onclick="nextStep()">Next</button>
-            </div>
-
-            <!-- STEP 2: Event Details -->
+            <!-- SINGLE STEP: all fields in one view, no progress steps needed -->
             <div class="form-scroll">
-                <div class="form-step">
-                    <h3>Event Details</h3>
+                <div class="form-step active">
 
-                    <!-- Package selector -->
-                    <div class="field-group">
-                        <label>Package Details</label>
-                        <div class="field-group">
-                            <label>Event Packages</label>
-                            <div id="pkgSummaryBar" class="pkg-summary-bar" style="display:none"></div>
-                            <div id="packageGrid" class="package-grid"></div>
-                            <div class="package-actions">
-                                <button type="button" onclick="openServiceCreator()" class="add-service-btn">+ Add New Service</button>
-                                <button type="button" id="editPkgBtn" onclick="openPackageEditor()" class="edit-package-btn" disabled>Edit Packages</button>
+                    <!-- ── ROW 1: TWO COLUMN GRID (Leads Details | Events Details) ── -->
+                    <div class="form-two-col">
+
+                        <!-- LEFT COLUMN: Leads Details -->
+                        <div class="form-col">
+                            <div class="form-col-header">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                <h3>Leads Details</h3>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- Hidden deliverables box (legacy) -->
-                    <div class="field-group" style="display:none">
-                        <label>Quotation &amp; Deliverables</label>
-                        <div id="deliverablesBox" class="deliverables-box">
-                            <p class="muted">Select a package to view deliverables</p>
-                        </div>
-                        <button type="button" class="add-deliverable-btn" onclick="openDeliverableModal()">+ Add Deliverable</button>
-                    </div>
+                            <!-- Client Name — actual editable field (same name attr as before) -->
+                            <div class="col-input-wrap">
+                                <span class="col-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+                                <input type="text" name="client_name" class="col-input" placeholder="Client Name" required>
+                            </div>
 
-                    <input type="text" name="event_type" placeholder="Event Type (Wedding, Reception, Baby Shower)" required>
+                            <!-- Phone — actual editable field -->
+                            <div class="col-input-wrap">
+                                <span class="col-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.5 19.79 19.79 0 0 1 1.27 5C1.23 3.89 2 2.94 3.11 2.91h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.09a16 16 0 0 0 6 6l.46-.46a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 18z"/></svg></span>
+                                <input type="text" name="phone" class="col-input" placeholder="Phone Number" required>
+                            </div>
 
-                    <div class="field-group">
-                        <label>Event Start</label>
-                        <div class="row">
-                            <input type="date" name="event_start_date" >
-                            <select name="event_start_session" >
-                                <option value="">Session</option>
-                                <option value="Morning">Morning</option>
-                                <option value="Evening">Evening</option>
-                            </select>
-                        </div>
-                    </div>
+                            <!-- Email — actual editable field -->
+                            <div class="col-input-wrap">
+                                <span class="col-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+                                <input type="email" name="email" class="col-input" placeholder="Email">
+                            </div>
 
-                    <div class="field-group">
-                        <label>Event End</label>
-                        <div class="row">
-                            <input type="date" name="event_end_date" >
-                            <select name="event_end_session" >
-                                <option value="">Session</option>
-                                <option value="Morning">Morning</option>
-                                <option value="Evening">Evening</option>
-                            </select>
-                        </div>
-                    </div>
+                            <!-- Event Location -->
+                            <div class="col-input-wrap">
+                                <span class="col-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+                                <input type="text" name="event_location" class="col-input" placeholder="Event Location" required>
+                            </div>
 
-                    <div class="field-group">
-                        <label>Total / Quoted Amount</label>
-                        <input type="number" name="total_amount" placeholder="Quoted amount (₹)" min="0" required>
-                    </div>
+                            <!-- Follow-up Date -->
+                            <div class="col-input-wrap">
+                                <span class="col-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+                                <input type="date" name="follow_up_date" class="col-input">
+                            </div>
 
-                    <!-- ════════════════════════════════════════════════════════
-                         PRICING SUMMARY WIDGET
-                         Appears automatically when a package is selected.
-                         Shows: Sub Total → Discount row → GST row → Final Total
-                         Has "Add Discount" and "Add GST / Tax" buttons that
-                         open the popups below.
-                         ════════════════════════════════════════════════════════ -->
-                    <div id="pricingSummaryWrap" style="display:none"></div>
+                        </div><!-- end left col -->
 
-                    <div class="field-group">
-                        <label>Follow-up Date</label>
-                        <input type="date" name="follow_up_date">
-                    </div>
+                        <!-- RIGHT COLUMN: Events Details -->
+                        <div class="form-col">
+                            <div class="form-col-header">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                <h3>Events Details</h3>
+                            </div>
 
-                    <input type="text" name="event_location" placeholder="Event Location" required>
+                            <!-- Event Type -->
+                            <div class="col-input-wrap">
+                                <span class="col-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
+                                <input type="text" name="event_type" class="col-input" placeholder="Event Type (Wedding, Reception...)" required>
+                            </div>
 
-                    <div class="form-actions">
-                        <button type="button" onclick="prevStep()">Back</button>
+                            <!-- Date Range -->
+                            <div class="col-input-wrap col-date-row">
+                                <span class="col-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+                                <input type="date" name="event_start_date" class="col-input col-date-half">
+                                <span class="col-date-sep">—</span>
+                                <input type="date" name="event_end_date" class="col-input col-date-half">
+                            </div>
+
+                            <!-- Sessions -->
+                            <div class="col-two-inputs">
+                                <select name="event_start_session" class="col-input col-select">
+                                    <option value="">Start Session</option>
+                                    <option value="Morning">Morning</option>
+                                    <option value="Evening">Evening</option>
+                                </select>
+                                <select name="event_end_session" class="col-input col-select">
+                                    <option value="">End Session</option>
+                                    <option value="Morning">Morning</option>
+                                    <option value="Evening">Evening</option>
+                                </select>
+                            </div>
+
+                        </div><!-- end right col -->
+
+                    </div><!-- end form-two-col -->
+
+                    <!-- ── Package section + Pricing below ── -->
+                    <div class="form-pkg-pricing-row">
+
+                        <!-- Package selector: full width -->
+                        <div class="form-pkg-left">
+
+                            <div class="field-group">
+                                <label>Package Details</label>
+                                <div class="field-group">
+                                    <label>Event Packages</label>
+                                    <div id="pkgSummaryBar" class="pkg-summary-bar" style="display:none"></div>
+                                    <div id="packageGrid" class="package-grid"></div>
+                                    <div class="package-actions">
+                                        <button type="button" onclick="openServiceCreator()" class="add-service-btn">+ Add New Service</button>
+                                        <button type="button" id="editPkgBtn" onclick="openPackageEditor()" class="edit-package-btn" disabled>Edit Packages</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Hidden deliverables box (legacy — kept for JS compatibility) -->
+                            <div class="field-group" style="display:none">
+                                <label>Quotation &amp; Deliverables</label>
+                                <div id="deliverablesBox" class="deliverables-box">
+                                    <p class="muted">Select a package to view deliverables</p>
+                                </div>
+                                <button type="button" class="add-deliverable-btn" onclick="openDeliverableModal()">+ Add Deliverable</button>
+                            </div>
+
+                            <!-- Total Amount + Pricing: below packages, half width, right side -->
+                            <div class="form-pricing-right">
+                                <div class="field-group">
+                                    <label>Total / Quoted Amount</label>
+                                    <input type="number" name="total_amount" placeholder="Quoted amount (₹)" min="0" required>
+                                </div>
+                                <div id="pricingSummaryWrap" style="display:none"></div>
+                            </div>
+
+                        </div><!-- end pkg left -->
+
+                    </div><!-- end form-pkg-pricing-row -->
+
+                    <!-- ── FORM ACTIONS: only Create Lead (Back button removed) ── -->
+                    <div class="form-actions form-actions-single">
                         <button type="submit">Create Lead</button>
                     </div>
-                </div>
-            </div>
+
+                </div><!-- end form-step -->
+            </div><!-- end form-scroll -->
+
         </form>
     </div>
 </div>
 
-<!-- ── PAYMENT MODAL ────────────────────────────────────────────── -->
-<!-- <div class="modal" id="paymentModal">
-    <div class="modal-content payment-box">
-        <div class="payment-header">
-            <h3>Advance Payment</h3>
-            <button class="close-btn" onclick="closePaymentModal()">×</button>
-        </div>
-        <div class="form-toast" id="paymentToast"></div>
-        <p class="payment-info">Enter the <strong>quoted amount</strong> and any <strong>advance paid</strong> by the client.</p>
-        <div class="field-group">
-            <label>Total / Quoted Amount (₹)</label>
-            <input type="number" id="totalAmount" placeholder="Eg: 50000">
-        </div>
-        <div class="field-group">
-            <label>Advance Paid (₹) <span>(optional)</span></label>
-            <input type="number" id="paidAmount" placeholder="Eg: 10000">
-        </div>
-        <div class="modal-actions">
-            <button class="btn-secondary" onclick="closeModal()">Ignore</button>
-            <button class="btn-primary" onclick="submitPayment()">Save &amp; Accept</button>
-        </div>
-    </div>
-</div> -->
+<!-- ── PAYMENT MODAL (kept commented for JS no-op stubs) ─────── -->
+<!-- <div class="modal" id="paymentModal"> ... </div> -->
 
 <!-- ── PKG EDIT PANEL ────────────────────────────────────────────── -->
 <div id="pkgEditOverlay" class="pkg-edit-overlay" onclick="closePkgEditPanel()"></div>
@@ -453,13 +473,12 @@
                 </svg>
                 Share Quotation
             </button>
-              <!-- ✅ ADD THIS RIGHT HERE — after Edit Lead, before Generate Invoice -->
-   <button class="lsm-btn lsm-btn-share" onclick="window.open('/leads/' + _successLeadId + '/quotation/', '_blank')">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-    </svg>
-    View Quotation
-</button>
+            <button class="lsm-btn lsm-btn-share" onclick="window.open('/leads/' + _successLeadId + '/quotation/', '_blank')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                </svg>
+                View Quotation
+            </button>
         </div>
         <button class="lsm-close" onclick="closeLeadSuccessModal()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
@@ -469,17 +488,10 @@
     </div>
 </div>
 
-
-<!-- ════════════════════════════════════════════════════════════════
-     DISCOUNT POPUP
-     Triggered by: openDiscountPopup()
-     Supports: Percentage (%) or Flat (₹) discount
-     Shows live preview as admin types
-     ════════════════════════════════════════════════════════════════ -->
+<!-- DISCOUNT POPUP -->
 <div class="pricing-popup" id="discountPopup" style="display:none">
     <div class="pp-backdrop" onclick="closeDiscountPopup()"></div>
     <div class="pp-card">
-
         <div class="pp-header">
             <div class="pp-header-icon pp-icon--green">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -497,43 +509,27 @@
                 </svg>
             </button>
         </div>
-
-        <!-- Percent / Flat toggle -->
         <div class="pp-type-toggle">
-            <button type="button" class="dp-type dp-type--active" data-dtype="percent"
-                onclick="discountTypeToggle('percent')">
-                <span class="dp-type-icon">%</span>
-                Percentage
+            <button type="button" class="dp-type dp-type--active" data-dtype="percent" onclick="discountTypeToggle('percent')">
+                <span class="dp-type-icon">%</span>Percentage
             </button>
-            <button type="button" class="dp-type" data-dtype="flat"
-                onclick="discountTypeToggle('flat')">
-                <span class="dp-type-icon">₹</span>
-                Flat Amount
+            <button type="button" class="dp-type" data-dtype="flat" onclick="discountTypeToggle('flat')">
+                <span class="dp-type-icon">₹</span>Flat Amount
             </button>
         </div>
-
-        <!-- Value input -->
         <div class="pp-field">
             <label class="pp-label">Discount Value</label>
             <div class="pp-input-wrap">
                 <span class="pp-input-prefix">%</span>
-                <input type="number" id="discountValueInput" class="pp-input"
-                    placeholder="e.g. 10" min="0"
-                    oninput="updateDiscountPreview()">
+                <input type="number" id="discountValueInput" class="pp-input" placeholder="e.g. 10" min="0" oninput="updateDiscountPreview()">
             </div>
-            <!-- Live preview: e.g. "10% of ₹1,25,000 = −₹12,500" -->
             <div class="pp-preview" id="discountPreview" style="display:none"></div>
         </div>
-
-        <!-- Amount after discount -->
         <div class="pp-after-total">
             <span>Amount after discount</span>
             <strong id="discountAfterTotal">—</strong>
         </div>
-
-        <!-- Subtotal reference -->
         <div class="pp-ref">Sub Total: ₹<span id="dpSubRef">0</span></div>
-
         <div class="pp-footer">
             <button type="button" class="pp-btn pp-btn--remove" onclick="removeDiscount()">Remove Discount</button>
             <button type="button" class="pp-btn pp-btn--apply pp-btn--green" onclick="applyDiscount()">Apply Discount ✓</button>
@@ -541,17 +537,10 @@
     </div>
 </div>
 
-
-<!-- ════════════════════════════════════════════════════════════════
-     TAX / GST POPUP
-     Triggered by: openTaxPopup()
-     Standard slabs: 0%, 5%, 12%, 18%, 28% + custom %
-     GST is calculated on (subtotal − discount)
-     ════════════════════════════════════════════════════════════════ -->
+<!-- TAX / GST POPUP -->
 <div class="pricing-popup" id="taxPopup" style="display:none">
     <div class="pp-backdrop" onclick="closeTaxPopup()"></div>
     <div class="pp-card">
-
         <div class="pp-header">
             <div class="pp-header-icon pp-icon--blue">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -570,61 +559,35 @@
                 </svg>
             </button>
         </div>
-
-        <!-- Standard GST slabs -->
         <label class="pp-label">Standard GST Slabs</label>
         <div class="gst-chips">
-            <button type="button" class="gst-chip" data-gst="0"  onclick="selectGstChip(0)">
-                0% <span>Exempt</span>
-            </button>
-            <button type="button" class="gst-chip" data-gst="5"  onclick="selectGstChip(5)">
-                5% <span>Basic</span>
-            </button>
-            <button type="button" class="gst-chip" data-gst="12" onclick="selectGstChip(12)">
-                12% <span>Standard</span>
-            </button>
-            <button type="button" class="gst-chip" data-gst="18" onclick="selectGstChip(18)">
-                18% <span>Regular</span>
-            </button>
-            <button type="button" class="gst-chip" data-gst="28" onclick="selectGstChip(28)">
-                28% <span>Luxury</span>
-            </button>
+            <button type="button" class="gst-chip" data-gst="0"  onclick="selectGstChip(0)">0% <span>Exempt</span></button>
+            <button type="button" class="gst-chip" data-gst="5"  onclick="selectGstChip(5)">5% <span>Basic</span></button>
+            <button type="button" class="gst-chip" data-gst="12" onclick="selectGstChip(12)">12% <span>Standard</span></button>
+            <button type="button" class="gst-chip" data-gst="18" onclick="selectGstChip(18)">18% <span>Regular</span></button>
+            <button type="button" class="gst-chip" data-gst="28" onclick="selectGstChip(28)">28% <span>Luxury</span></button>
         </div>
-
-        <!-- Custom rate input -->
         <div class="pp-field" style="margin-top:16px">
             <label class="pp-label">Custom Rate (%)</label>
             <div class="pp-input-wrap">
                 <span class="pp-input-prefix">%</span>
-                <input type="number" id="gstCustomInput" class="pp-input"
-                    placeholder="Enter custom %" min="0" max="100"
+                <input type="number" id="gstCustomInput" class="pp-input" placeholder="Enter custom %" min="0" max="100"
                     oninput="updateTaxPreview(); document.querySelectorAll('.gst-chip').forEach(b=>b.classList.remove('gst-chip--active'))">
             </div>
         </div>
-
-        <!-- Live preview: e.g. "18% on ₹1,12,500 = +₹20,250" -->
         <div class="pp-preview" id="taxPreview" style="display:none"></div>
-
-        <!-- Total after GST -->
         <div class="pp-after-total" style="margin-top:12px">
             <span>Total after GST</span>
             <strong id="taxFinalTotal">—</strong>
         </div>
-
         <div class="pp-footer">
             <button type="button" class="pp-btn pp-btn--remove" onclick="removeGst()">Remove GST</button>
             <button type="button" class="pp-btn pp-btn--apply pp-btn--blue" onclick="applyTax()">Apply GST ✓</button>
         </div>
     </div>
 </div>
-<!-- ═══════════════════════════════════════════════════════════════
-     LEAD ACCEPTANCE FLOW — ADD THESE MODALS TO leads.html
-     Place just before the closing </body> tag (after existing modals)
-     Also add: <script src="{% static 'js/lead_acceptance.js' %}"></script>
-     at the end (AFTER dragdrop.js)
-     ═══════════════════════════════════════════════════════════════ -->
 
-<!-- ── STEP 1: CONFIRM ACCEPT DIALOG ──────────────────────────── -->
+<!-- LEAD ACCEPTANCE FLOW MODALS -->
 <div class="ac-confirm-overlay" id="acceptConfirmOverlay">
     <div class="ac-backdrop" onclick="acConfirmNo()"></div>
     <div class="ac-confirm-card">
@@ -651,13 +614,9 @@
     </div>
 </div>
 
-
-<!-- ── STEP 2: FULL LEAD PREVIEW MODAL ───────────────────────── -->
 <div class="lpm-overlay" id="leadPreviewModal">
     <div class="lpm-backdrop" onclick="lpClosePreview()"></div>
     <div class="lpm-wrap">
-
-        <!-- HEADER -->
         <div class="lpm-header">
             <div class="lpm-header-left">
                 <div class="lpm-header-badge">
@@ -677,63 +636,27 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
-
-        <!-- SCROLL BODY -->
         <div class="lpm-body">
-
-            <!-- ── CLIENT + EVENT INFO GRID ── -->
             <div class="lpm-info-grid">
                 <div class="lpm-info-card">
                     <div class="lpm-section-label">Client Details</div>
-                    <div class="lpm-info-row">
-                        <span class="lpm-info-key">Name</span>
-                        <span class="lpm-info-val" id="lpClientName">—</span>
-                    </div>
-                    <div class="lpm-info-row">
-                        <span class="lpm-info-key">Phone</span>
-                        <span class="lpm-info-val" id="lpPhone">—</span>
-                    </div>
-                    <div class="lpm-info-row">
-                        <span class="lpm-info-key">Email</span>
-                        <span class="lpm-info-val" id="lpEmail">—</span>
-                    </div>
+                    <div class="lpm-info-row"><span class="lpm-info-key">Name</span><span class="lpm-info-val" id="lpClientName">—</span></div>
+                    <div class="lpm-info-row"><span class="lpm-info-key">Phone</span><span class="lpm-info-val" id="lpPhone">—</span></div>
+                    <div class="lpm-info-row"><span class="lpm-info-key">Email</span><span class="lpm-info-val" id="lpEmail">—</span></div>
                 </div>
-
                 <div class="lpm-info-card">
                     <div class="lpm-section-label">Event Details</div>
-                    <div class="lpm-info-row">
-                        <span class="lpm-info-key">Type</span>
-                        <span class="lpm-info-val" id="lpEventType">—</span>
-                    </div>
-                    <div class="lpm-info-row">
-                        <span class="lpm-info-key">Dates</span>
-                        <span class="lpm-info-val" id="lpDates">—</span>
-                    </div>
-                    <div class="lpm-info-row" id="lpFollowupRow">
-                        <span class="lpm-info-key">Follow-up</span>
-                        <span class="lpm-info-val" id="lpFollowup">—</span>
-                    </div>
-                    <div class="lpm-info-row">
-                        <span class="lpm-info-key">Location</span>
-                        <span class="lpm-info-val" id="lpLocation">—</span>
-                    </div>
+                    <div class="lpm-info-row"><span class="lpm-info-key">Type</span><span class="lpm-info-val" id="lpEventType">—</span></div>
+                    <div class="lpm-info-row"><span class="lpm-info-key">Dates</span><span class="lpm-info-val" id="lpDates">—</span></div>
+                    <div class="lpm-info-row" id="lpFollowupRow"><span class="lpm-info-key">Follow-up</span><span class="lpm-info-val" id="lpFollowup">—</span></div>
+                    <div class="lpm-info-row"><span class="lpm-info-key">Location</span><span class="lpm-info-val" id="lpLocation">—</span></div>
                 </div>
             </div>
-
-            <!-- ── SERVICES TABLE ── -->
             <div class="lpm-section">
-                <div class="lpm-section-label-big">
-                    <span>Services &amp; Packages</span>
-                    <div class="lpm-section-line"></div>
-                </div>
+                <div class="lpm-section-label-big"><span>Services &amp; Packages</span><div class="lpm-section-line"></div></div>
                 <div class="lpm-table-wrap">
                     <table class="lpm-table">
-                        <colgroup>
-                            <col>
-                            <col style="width:54px">
-                            <col style="width:96px">
-                            <col style="width:96px">
-                        </colgroup>
+                        <colgroup><col><col style="width:54px"><col style="width:96px"><col style="width:96px"></colgroup>
                         <thead>
                             <tr>
                                 <th>Package / Service</th>
@@ -742,113 +665,57 @@
                                 <th class="lpm-tr">Amount</th>
                             </tr>
                         </thead>
-                        <tbody id="lpServicesTbody">
-                        </tbody>
+                        <tbody id="lpServicesTbody"></tbody>
                     </table>
                 </div>
             </div>
-
-            <!-- ── PRICING BREAKDOWN ── -->
             <div class="lpm-pricing-strip">
-                <div class="lpm-pricing-row lpm-pr-sub">
-                    <span>Subtotal</span>
-                    <span id="lpSubtotal">₹0</span>
-                </div>
-                <div class="lpm-pricing-row lpm-pr-discount" id="lpDiscountRow">
-                    <span id="lpDiscountLabel">Discount</span>
-                    <span id="lpDiscountVal">—</span>
-                </div>
-                <div class="lpm-pricing-row lpm-pr-gst" id="lpGstRow">
-                    <span id="lpGstLabel">GST</span>
-                    <span id="lpGstVal">—</span>
-                </div>
+                <div class="lpm-pricing-row lpm-pr-sub"><span>Subtotal</span><span id="lpSubtotal">₹0</span></div>
+                <div class="lpm-pricing-row lpm-pr-discount" id="lpDiscountRow"><span id="lpDiscountLabel">Discount</span><span id="lpDiscountVal">—</span></div>
+                <div class="lpm-pricing-row lpm-pr-gst" id="lpGstRow"><span id="lpGstLabel">GST</span><span id="lpGstVal">—</span></div>
                 <div class="lpm-pricing-divider"></div>
-                <div class="lpm-pricing-row lpm-pr-total">
-                    <span>Total Amount</span>
-                    <span id="lpTotalFinal">₹0</span>
-                </div>
+                <div class="lpm-pricing-row lpm-pr-total"><span>Total Amount</span><span id="lpTotalFinal">₹0</span></div>
             </div>
-
-            <!-- ── PAYMENT STATUS CARD ── -->
             <div class="lpm-payment-card">
-                <div class="lpm-section-label-big">
-                    <span>Payment Status</span>
-                    <div class="lpm-section-line"></div>
-                </div>
-
+                <div class="lpm-section-label-big"><span>Payment Status</span><div class="lpm-section-line"></div></div>
                 <div class="lpm-pay-stats">
-                    <div class="lpm-pay-stat">
-                        <span class="lpm-pay-label">Total</span>
-                        <span class="lpm-pay-val" id="lpPayTotal">₹0</span>
-                    </div>
-                    <div class="lpm-pay-stat">
-                        <span class="lpm-pay-label">Advance Paid</span>
-                        <span class="lpm-pay-val lpm-paid" id="lpPayPaid">₹0</span>
-                    </div>
-                    <div class="lpm-pay-stat">
-                        <span class="lpm-pay-label">Balance Due</span>
-                        <span class="lpm-pay-val lpm-due" id="lpPayRemaining">₹0</span>
-                    </div>
+                    <div class="lpm-pay-stat"><span class="lpm-pay-label">Total</span><span class="lpm-pay-val" id="lpPayTotal">₹0</span></div>
+                    <div class="lpm-pay-stat"><span class="lpm-pay-label">Advance Paid</span><span class="lpm-pay-val lpm-paid" id="lpPayPaid">₹0</span></div>
+                    <div class="lpm-pay-stat"><span class="lpm-pay-label">Balance Due</span><span class="lpm-pay-val lpm-due" id="lpPayRemaining">₹0</span></div>
                 </div>
-
                 <div class="lpm-progress-wrap">
-                    <div class="lpm-progress-bar">
-                        <div class="lpm-progress-fill" id="lpPayProgressBar" style="width:0%"></div>
-                    </div>
+                    <div class="lpm-progress-bar"><div class="lpm-progress-fill" id="lpPayProgressBar" style="width:0%"></div></div>
                     <span class="lpm-progress-pct" id="lpPayPct">0%</span>
                 </div>
-
                 <button class="lpm-make-pay-btn" onclick="lpOpenMakePayment()">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                        <line x1="1" y1="10" x2="23" y2="10"/>
-                    </svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                     Make Payment
                 </button>
             </div>
-
-        </div><!-- end lpm-body -->
-
-        <!-- FOOTER ACTIONS -->
+        </div>
         <div class="lpm-footer">
             <button class="lpm-btn lpm-btn-edit" onclick="lpEditLead()">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 Edit Lead
             </button>
             <button class="lpm-btn lpm-btn-invoice" onclick="lpGenerateInvoice()">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                </svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                 Generate Invoice PDF
             </button>
             <button class="lpm-btn lpm-btn-accept" onclick="lpAcceptLead()">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="20 6 9 17 4 12"/>
-                </svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 Confirm &amp; Accept Lead
             </button>
         </div>
-
-    </div><!-- end lpm-wrap -->
+    </div>
 </div>
 
-
-<!-- ── MAKE PAYMENT POPUP ─────────────────────────────────────── -->
 <div class="lpmp-overlay" id="lpMakePaymentPopup" style="display:none">
     <div class="lpmp-backdrop" onclick="lpCloseMakePayment()"></div>
     <div class="lpmp-card">
         <div class="lpmp-header">
             <div class="lpmp-icon">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                    <line x1="1" y1="10" x2="23" y2="10"/>
-                </svg>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
             </div>
             <div>
                 <div class="lpmp-title">Record Payment</div>
@@ -858,89 +725,56 @@
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
-
         <div class="lpmp-toast" id="lpMpToast" style="display:none"></div>
-
         <div class="lpmp-field">
             <label class="lpmp-label">Advance / Paid Amount (₹)</label>
             <div class="lpmp-input-wrap">
                 <span class="lpmp-prefix">₹</span>
-                <input type="number" id="lpMpPaidInput" class="lpmp-input"
-                    placeholder="Enter amount paid" min="0"
-                    oninput="lpMpLiveCalc()">
+                <input type="number" id="lpMpPaidInput" class="lpmp-input" placeholder="Enter amount paid" min="0" oninput="lpMpLiveCalc()">
             </div>
             <div class="lpmp-live-preview" id="lpMpLivePreview" style="display:none"></div>
         </div>
-
         <div class="lpmp-footer">
             <button class="lpmp-btn-cancel" onclick="lpCloseMakePayment()">Cancel</button>
             <button class="lpmp-btn-save" onclick="lpSubmitPayment()">Save Payment</button>
         </div>
     </div>
 </div>
-<!-- ================================================================
-     DATE CONFLICT ALERT POPUP
-     ================================================================ -->
 
 <div class="dca-overlay" id="dcaOverlay">
     <div class="dca-backdrop" onclick="_closeDcaPopup()"></div>
     <div class="dca-card">
-
-        <!-- animated amber top stripe -->
         <div class="dca-stripe"></div>
-
         <div class="dca-body">
-
-            <!-- icon with pulsing rings -->
             <div class="dca-icon-wrap">
                 <div class="dca-icon-ring dca-icon-ring-1"></div>
                 <div class="dca-icon-ring dca-icon-ring-2"></div>
                 <div class="dca-icon-circle">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none"
-                         stroke="currentColor" stroke-width="2.2"
-                         stroke-linecap="round" stroke-linejoin="round">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
                         <line x1="12" y1="9" x2="12" y2="13"/>
                         <line x1="12" y1="17" x2="12.01" y2="17"/>
                     </svg>
                 </div>
             </div>
-
             <div class="dca-title">Date Conflict Detected</div>
-            <div class="dca-sub" id="dcaSub">
-                This date already has events scheduled.
-            </div>
-
-            <!-- scrollable list of conflicts -->
-            <div class="dca-conflicts-list" id="dcaConflictsList">
-                <!-- filled dynamically -->
-            </div>
-
-            <!-- footer actions -->
+            <div class="dca-sub" id="dcaSub">This date already has events scheduled.</div>
+            <div class="dca-conflicts-list" id="dcaConflictsList"></div>
             <div class="dca-footer">
                 <button class="dca-btn dca-btn-change" onclick="dcaChangeDate()">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                         style="margin-right:5px;vertical-align:middle">
-                        <polyline points="1 4 1 10 7 10"/>
-                        <path d="M3.51 15a9 9 0 1 0 .49-3.95"/>
-                    </svg>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:5px;vertical-align:middle"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.95"/></svg>
                     Change Date
                 </button>
                 <button class="dca-btn dca-btn-proceed" onclick="dcaProceedAnyway()">
                     Proceed Anyway
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                         style="margin-left:5px;vertical-align:middle">
-                        <polyline points="9 18 15 12 9 6"/>
-                    </svg>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-left:5px;vertical-align:middle"><polyline points="9 18 15 12 9 6"/></svg>
                 </button>
             </div>
-
-        </div><!-- /dca-body -->
-    </div><!-- /dca-card -->
-</div><!-- /dca-overlay -->
-
+        </div>
+    </div>
+</div>
 
 <script src="{% static 'js/dragdrop.js' %}"></script>
+<script src="{% static 'js/avail_calendar.js' %}"></script>
+<script src="{% static 'js/pkg_editor_patch_fixed.js' %}"></script>
 {% endblock %}

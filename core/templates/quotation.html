@@ -6,12 +6,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quotation — {{ lead.client_name }} | AR Akash Photography</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/quot_edit.css' %}">
 <style>
 /* ================================================================
    AR AKASH PHOTOGRAPHY — CLIENT QUOTATION PAGE
-   Luxury wedding photography proposal
 ================================================================ */
-
 :root {
   --mauve:    #7d3f5a;
   --mauve-dk: #5a2d42;
@@ -24,11 +23,8 @@
   --white:    #ffffff;
   --border:   rgba(125,63,90,0.18);
 }
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 html { scroll-behavior: smooth; }
-
 body {
   font-family: 'Jost', sans-serif;
   background: var(--cream);
@@ -38,11 +34,7 @@ body {
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
-
-/* ── TYPOGRAPHY ── */
 h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
-
-/* ── NO-PRINT ELEMENTS ── */
 .no-print { }
 @media print {
   .no-print { display: none !important; }
@@ -50,9 +42,7 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
   .section { page-break-inside: avoid; }
 }
 
-/* ================================================================
-   TOP NAV BAR
-================================================================ */
+/* ── TOP NAV ── */
 .topbar {
   position: fixed;
   top: 0; left: 0; right: 0;
@@ -63,6 +53,7 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
   justify-content: space-between;
   padding: 0 40px;
   height: 56px;
+  gap: 16px;
 }
 .topbar-nav { display: flex; gap: 32px; }
 .topbar-nav a {
@@ -82,6 +73,13 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
   letter-spacing: 3px;
   text-transform: uppercase;
   text-align: center;
+  flex-shrink: 0;
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
 }
 .topbar-price {
   color: rgba(255,255,255,0.9);
@@ -89,14 +87,47 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
   letter-spacing: 1px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 .topbar-price svg { opacity: 0.7; }
 .topbar-price .price-val { font-weight: 500; font-size: 15px; }
 
-/* ================================================================
-   HERO
-================================================================ */
+/* ── SHARE BUTTON in topbar ── */
+.topbar-share-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 18px;
+  background: #25D366;
+  color: white;
+  border: none;
+  border-radius: 24px;
+  font-family: 'Jost', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 3px 12px rgba(37,211,102,0.35);
+  white-space: nowrap;
+  text-decoration: none;
+}
+.topbar-share-btn:hover {
+  background: #1ebe5d;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 18px rgba(37,211,102,0.45);
+}
+.topbar-share-btn svg { flex-shrink: 0; }
+
+/* ── EDIT FAB (bottom-left, open to everyone) ── */
+.quot-edit-fab {
+  position: fixed;
+  bottom: 36px;
+  left: 36px;
+  z-index: 1200;
+}
+
+/* ── HERO ── */
 .hero {
   position: relative;
   height: 100vh;
@@ -136,12 +167,7 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
   align-items: center;
   margin-bottom: 28px;
 }
-.hero-brand-logo {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 10px;
-  opacity: 0.9;
-}
+.hero-brand-logo { width: 64px; height: 64px; margin-bottom: 10px; opacity: 0.9; }
 .hero-brand-name {
   font-family: 'Cormorant Garamond', serif;
   font-size: 13px;
@@ -156,33 +182,12 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
   line-height: 1.2;
   margin-bottom: 14px;
 }
-.hero-subtitle {
-  font-size: 13px;
-  letter-spacing: 2px;
-  opacity: 0.7;
-  font-style: italic;
-}
+.hero-subtitle { font-size: 13px; letter-spacing: 2px; opacity: 0.7; font-style: italic; }
 
-/* ================================================================
-   WELCOME SECTION
-================================================================ */
-.welcome {
-  background: var(--blush);
-  padding: 90px 40px;
-  text-align: center;
-}
-.welcome h2 {
-  font-size: clamp(28px, 4vw, 42px);
-  color: var(--mauve-dk);
-  margin-bottom: 28px;
-}
-.welcome p {
-  max-width: 660px;
-  margin: 0 auto 36px;
-  font-size: 14.5px;
-  color: var(--muted);
-  line-height: 1.9;
-}
+/* ── WELCOME ── */
+.welcome { background: var(--blush); padding: 90px 40px; text-align: center; }
+.welcome h2 { font-size: clamp(28px, 4vw, 42px); color: var(--mauve-dk); margin-bottom: 28px; }
+.welcome p { max-width: 660px; margin: 0 auto 36px; font-size: 14.5px; color: var(--muted); line-height: 1.9; }
 .welcome-btn {
   display: inline-block;
   border: 1px solid var(--mauve);
@@ -199,9 +204,7 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
 }
 .welcome-btn:hover { background: var(--mauve); color: white; }
 
-/* ================================================================
-   OUR STORY
-================================================================ */
+/* ── OUR STORY ── */
 .story {
   background: var(--cream);
   padding: 80px 40px;
@@ -212,630 +215,134 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
   margin: 0 auto;
   align-items: center;
 }
-.story-image {
-  position: relative;
-  padding-right: 30px;
-}
-.story-image img {
-  width: 100%;
-  height: 480px;
-  object-fit: cover;
-  display: block;
-  margin-left: 100px;
-}
-.story-image-placeholder {
-  width: 100%;
-  height: 480px;
-  background: linear-gradient(135deg, var(--mauve-lt), var(--blush));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--muted);
-  font-size: 13px;
-  letter-spacing: 2px;
-}
-.story-text {
-  background: var(--mauve);
-  color: rgba(255,255,255,0.9);
-  padding: 30px 120px;
-  margin-top: 100px;
-  
-  
-}
-.story-text h2 {
-  font-size: 25px;
-  color: white;
-  margin-bottom: 24px;
-  font-weight: 400;
-  text-align: left;
-}
-.story-text p {
-  font-size: 12px;
-  line-height: 1.9;
-  opacity: 0.85;
-  margin-bottom: 16px;
-  text-align: left;
-}
+.story-image { position: relative; padding-right: 30px; }
+.story-image img { width: 100%; height: 480px; object-fit: cover; display: block; margin-left: 100px; }
+.story-text { background: var(--mauve); color: rgba(255,255,255,0.9); padding: 30px 120px; margin-top: 100px; }
+.story-text h2 { font-size: 25px; color: white; margin-bottom: 24px; font-weight: 400; text-align: left; }
+.story-text p { font-size: 12px; line-height: 1.9; opacity: 0.85; margin-bottom: 16px; text-align: left; }
 .story-text p:last-child { margin-bottom: 0; }
-/* ================================================================
-   SIGNATURE WORKS
-================================================================ */
-.gallery-section {
-  background: var(--blush);
-  padding: 80px 40px;
-  text-align: center;
-}
-.gallery-section h2 {
-  font-size: clamp(28px, 4vw, 40px);
-  color: var(--mauve-dk);
-  margin-bottom: 52px;
-}
+
+/* ── GALLERY ── */
+.gallery-section { background: var(--blush); padding: 80px 40px; text-align: center; }
+.gallery-section h2 { font-size: clamp(28px, 4vw, 40px); color: var(--mauve-dk); margin-bottom: 52px; }
 .gallery-grid {
   display: flex;
   gap: 16px;
   justify-content: center;
-  align-items: flex-start;   /* ← changed from flex-end */
+  align-items: flex-start;
   overflow-x: auto;
   padding-bottom: 8px;
   padding-top: 40px;
 }
-.gallery-item {
-  flex: 0 0 auto;
-  text-align: center;
-}
-
-/* ── stagger: 1 and 5 sit lowest, 2 and 4 rise a bit, 3 rises most ── */
+.gallery-item { flex: 0 0 auto; text-align: center; }
 .gallery-item:nth-child(1) { transform: translateY(60px); }
 .gallery-item:nth-child(2) { transform: translateY(20px); }
 .gallery-item:nth-child(3) { transform: translateY(-40px); }
-.gallery-item:nth-child(3) .gallery-img {
-  height: 280px;
-  width: 280px;
-} /* tallest, stays at top */
+.gallery-item:nth-child(3) .gallery-img { height: 480px; width: 280px; }
 .gallery-item:nth-child(4) { transform: translateY(20px); }
 .gallery-item:nth-child(5) { transform: translateY(60px); }
+.gallery-img { width: 200px; height: 280px; object-fit: cover; display: block; }
+.gallery-item h4 { font-family: 'Cormorant Garamond', serif; font-size: 14px; color: var(--mauve-dk); margin-top: 12px; font-weight: 500; }
+.gallery-item small { display: block; font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-top: 4px; }
 
-/* ── image sizes: center taller ── */
-.gallery-item:nth-child(3) .gallery-img {
-  height: 480px;
-  width: 280px;
-}
-.gallery-img {
-  width: 200px;
-  height: 280px;
-  object-fit: cover;
-  display: block;
-}
-.gallery-img-placeholder {
-  width: 170px;
-  height: 240px;
-  background: linear-gradient(160deg, var(--mauve-lt), rgba(125,63,90,0.15));
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 20px;
-}
-.gallery-item h4 {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 14px;
-  color: var(--mauve-dk);
-  margin-top: 12px;
-  font-weight: 500;
-}
-.gallery-item small {
-  display: block;
-  font-size: 10px;
-  letter-spacing: 2px;
-  color: var(--muted);
-  text-transform: uppercase;
-  margin-top: 4px;
-}
-/* ================================================================
-   VIDEO SHOWCASE
-================================================================ */
-.video-section {
-  background: var(--cream);
-  padding: 80px 40px;
-  text-align: center;
-  margin-bottom: 50px;
-}
-.video-section h2 {
-  font-size: clamp(28px, 4vw, 42px);
-  color: black;
-  margin-bottom: 10px;
-}
-.video-subtitle {
-  font-size: 13px;
-  color: rgba(255,255,255,0.55);
-  letter-spacing: 2px;
-  font-style: italic;
-  margin-bottom: 48px;
-}
-.video-grid {
-  display: grid;
-  grid-template-columns: 1.6fr 1fr;
-  grid-template-rows: auto auto;
-  gap: 12px;
-  max-width: 1000px;
-  margin: 0 auto;
-}
-/* Large video spans 2 rows on left */
-.video-item--large {
-  grid-row: 1 / 3;
-}
-.video-item {
-  position: relative;
-  overflow: hidden;
-  cursor: pointer;
-}
-.video-item video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  min-height: 220px;
-  transition: transform 0.5s ease;
-}
-.video-item--large video {
-  min-height: 460px;
-}
-.video-item:hover video {
-  transform: scale(1.04);
-}
-/* Dark gradient overlay */
+/* ── VIDEO ── */
+.video-section { background: var(--cream); padding: 80px 40px; text-align: center; margin-bottom: 50px; }
+.video-section h2 { font-size: clamp(28px, 4vw, 42px); color: black; margin-bottom: 10px; }
+.video-subtitle { font-size: 13px; color: rgba(255,255,255,0.55); letter-spacing: 2px; font-style: italic; margin-bottom: 48px; }
+.video-grid { display: grid; grid-template-columns: 1.6fr 1fr; grid-template-rows: auto auto; gap: 12px; max-width: 1000px; margin: 0 auto; }
+.video-item--large { grid-row: 1 / 3; }
+.video-item { position: relative; overflow: hidden; cursor: pointer; }
+.video-item video { width: 100%; height: 100%; object-fit: cover; display: block; min-height: 220px; transition: transform 0.5s ease; }
+.video-item--large video { min-height: 460px; }
+.video-item:hover video { transform: scale(1.04); }
 .video-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(44,26,34,0.75) 0%,
-    rgba(44,26,34,0.1) 50%,
-    transparent 100%
-  );
-  display: flex;
-  align-items: flex-end;
-  padding: 20px;
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(44,26,34,0.75) 0%, rgba(44,26,34,0.1) 50%, transparent 100%);
+  display: flex; align-items: flex-end; padding: 20px;
   transition: background 0.3s;
 }
-.video-item:hover .video-overlay {
-  background: linear-gradient(
-    to top,
-    rgba(44,26,34,0.5) 0%,
-    transparent 100%
-  );
-}
-.video-label {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 18px;
-  color: white;
-  letter-spacing: 2px;
-  font-weight: 400;
-}
-@media (max-width: 768px) {
-  .video-grid { grid-template-columns: 1fr; }
-  .video-item--large { grid-row: auto; }
-}
-@media print {
-  .video-section { display: none; }
-}
-/* ================================================================
-   DEAR CLIENT
-================================================================ */
-.dear-client {
-  background: var(--mauve);
-  padding: 60px 40px;
-  text-align: center;
-  color: white;
-}
-.dear-client .small-label {
-  font-style: italic;
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 16px;
-  opacity: 0.7;
-  margin-bottom: 8px;
-}
-.dear-client h2 {
-  font-size: clamp(32px, 5vw, 52px);
-  color: white;
-  font-weight: 400;
-  letter-spacing: 1px;
-}
-.dear-client p {
-  margin-top: 14px;
-  font-size: 14px;
-  opacity: 0.75;
-  letter-spacing: 1px;
-}
+.video-item:hover .video-overlay { background: linear-gradient(to top, rgba(44,26,34,0.5) 0%, transparent 100%); }
+.video-label { font-family: 'Cormorant Garamond', serif; font-size: 18px; color: white; letter-spacing: 2px; font-weight: 400; }
+@media (max-width: 768px) { .video-grid { grid-template-columns: 1fr; } .video-item--large { grid-row: auto; } }
+@media print { .video-section { display: none; } }
 
-/* ================================================================
-   PAYMENT PRICE
-================================================================ */
-.payment-price {
-  background: var(--mauve-dk);
-  padding: 70px 40px;
-  text-align: center;
-  color: white;
-}
-.payment-price h2 {
-  font-size: 36px;
-  color: white;
-  margin-bottom: 10px;
-}
-.payment-price .subtitle {
-  font-size: 13px;
-  opacity: 0.65;
-  letter-spacing: 1px;
-  margin-bottom: 20px;
-}
-.price-display {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: clamp(36px, 6vw, 56px);
-  font-weight: 400;
-  color: rgba(255,255,255,0.95);
-  letter-spacing: 1px;
-}
-.price-breakdown {
-  margin-top: 20px;
-  display: inline-flex;
-  flex-direction: column;
-  gap: 6px;
-  text-align: left;
-  background: rgba(255,255,255,0.07);
-  padding: 18px 28px;
-  border-radius: 4px;
-  min-width: 260px;
-}
-.price-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 40px;
-  font-size: 13px;
-  opacity: 0.8;
-}
-.price-row.total-row {
-  border-top: 1px solid rgba(255,255,255,0.2);
-  padding-top: 8px;
-  margin-top: 4px;
-  opacity: 1;
-  font-weight: 500;
-}
+/* ── DEAR CLIENT ── */
+.dear-client { background: var(--mauve); padding: 60px 40px; text-align: center; color: white; }
+.dear-client .small-label { font-style: italic; font-family: 'Cormorant Garamond', serif; font-size: 16px; opacity: 0.7; margin-bottom: 8px; }
+.dear-client h2 { font-size: clamp(32px, 5vw, 52px); color: white; font-weight: 400; letter-spacing: 1px; }
+.dear-client p { margin-top: 14px; font-size: 14px; opacity: 0.75; letter-spacing: 1px; }
 
-/* ================================================================
-   EVENTS
-================================================================ */
-.events-section {
-  background: var(--blush);
-  padding: 80px 40px;
-  text-align: center;
-}
-.events-section h2 {
-  font-size: clamp(28px, 4vw, 40px);
-  color: var(--mauve-dk);
-  margin-bottom: 48px;
-}
-.events-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 24px;
-  max-width: 960px;
-  margin: 0 auto;
-  text-align: left;
-}
-.event-card {
-  background: rgba(255,255,255,0.7);
-  border: 1px solid var(--border);
-  padding: 32px 28px;
-  border-radius: 4px;
-}
-.event-card h3 {
-  font-size: 22px;
-  color: var(--mauve-dk);
-  margin-bottom: 18px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-.event-card ul {
-  list-style: none;
-}
-.event-card li {
-  font-size: 13.5px;
-  color: var(--muted);
-  padding: 5px 0;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-.event-card li::before {
-  content: '';
-  width: 4px; height: 4px;
-  background: var(--mauve);
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.event-date-badge {
-  display: inline-block;
-  background: var(--mauve-lt);
-  color: var(--mauve);
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  padding: 3px 10px;
-  border-radius: 20px;
-  margin-bottom: 12px;
-  text-transform: uppercase;
-}
+/* ── PAYMENT PRICE ── */
+.payment-price { background: var(--mauve-dk); padding: 70px 40px; text-align: center; color: white; }
+.payment-price h2 { font-size: 36px; color: white; margin-bottom: 10px; }
+.payment-price .subtitle { font-size: 13px; opacity: 0.65; letter-spacing: 1px; margin-bottom: 20px; }
+.price-display { font-family: 'Cormorant Garamond', serif; font-size: clamp(36px, 6vw, 56px); font-weight: 400; color: rgba(255,255,255,0.95); letter-spacing: 1px; }
+.price-breakdown { margin-top: 20px; display: inline-flex; flex-direction: column; gap: 6px; text-align: left; background: rgba(255,255,255,0.07); padding: 18px 28px; border-radius: 4px; min-width: 260px; }
+.price-row { display: flex; justify-content: space-between; gap: 40px; font-size: 13px; opacity: 0.8; }
+.price-row.total-row { border-top: 1px solid rgba(255,255,255,0.2); padding-top: 8px; margin-top: 4px; opacity: 1; font-weight: 500; }
 
-/* ================================================================
-   DELIVERABLES
-================================================================ */
-.deliverables-section {
-  background: var(--cream);
-  padding: 80px 40px;
-  text-align: center;
-}
-.deliverables-section h2 {
-  font-size: clamp(28px, 4vw, 40px);
-  color: var(--mauve-dk);
-  margin-bottom: 40px;
-}
-.deliverables-list {
-  max-width: 720px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.deliverable-item {
-  background: rgba(255,255,255,0.8);
-  border: 1px solid var(--border);
-  padding: 18px 28px;
-  border-radius: 4px;
-  text-align: left;
-  font-size: 14px;
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.deliverable-item::before {
-  content: '';
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--mauve);
-  flex-shrink: 0;
-}
-.deliverable-extra {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--gold);
-  white-space: nowrap;
-}
+/* ── EVENTS ── */
+.events-section { background: var(--blush); padding: 80px 40px; text-align: center; }
+.events-section h2 { font-size: clamp(28px, 4vw, 40px); color: var(--mauve-dk); margin-bottom: 48px; }
+.events-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; max-width: 960px; margin: 0 auto; text-align: left; }
+.event-card { background: rgba(255,255,255,0.7); border: 1px solid var(--border); padding: 32px 28px; border-radius: 4px; }
+.event-card h3 { font-size: 22px; color: var(--mauve-dk); margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.event-card ul { list-style: none; }
+.event-card li { font-size: 13.5px; color: var(--muted); padding: 5px 0; display: flex; gap: 10px; align-items: center; }
+.event-card li::before { content: ''; width: 4px; height: 4px; background: var(--mauve); border-radius: 50%; flex-shrink: 0; }
+.event-date-badge { display: inline-block; background: var(--mauve-lt); color: var(--mauve); font-size: 10px; letter-spacing: 1.5px; padding: 3px 10px; border-radius: 20px; margin-bottom: 12px; text-transform: uppercase; }
 
-/* ================================================================
-   ADDITIONAL SERVICES
-================================================================ */
-.addl-section {
-  background: var(--blush);
-  padding: 80px 40px;
-  text-align: center;
-}
-.addl-section h2 {
-  font-size: clamp(28px, 4vw, 40px);
-  color: var(--mauve-dk);
-  margin-bottom: 40px;
-}
-.addl-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 720px;
-  margin: 0 auto 16px;
-  padding: 14px 20px;
-  border-left: 3px solid var(--mauve);
-  background: rgba(255,255,255,0.5);
-  font-size: 13px;
-  color: var(--muted);
-}
-.addl-list {
-  max-width: 720px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.addl-item {
-  background: rgba(255,255,255,0.7);
-  border: 1px solid var(--border);
-  padding: 20px 24px;
-  border-radius: 4px;
-  text-align: left;
-}
-.addl-item-name {
-  font-size: 14.5px;
-  color: var(--ink);
-  margin-bottom: 10px;
-}
-.addl-item-footer {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  justify-content: flex-end;
-}
-.addl-qty {
-  font-size: 13px;
-  color: var(--muted);
-}
-.addl-price {
-  font-size: 13px;
-  color: var(--muted);
-}
-.addl-badge {
-  background: var(--mauve);
-  color: white;
-  font-size: 11px;
-  padding: 5px 16px;
-  border-radius: 20px;
-  letter-spacing: 0.5px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
+/* ── DELIVERABLES ── */
+.deliverables-section { background: var(--cream); padding: 80px 40px; text-align: center; }
+.deliverables-section h2 { font-size: clamp(28px, 4vw, 40px); color: var(--mauve-dk); margin-bottom: 40px; }
+.deliverables-list { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+.deliverable-item { background: rgba(255,255,255,0.8); border: 1px solid var(--border); padding: 18px 28px; border-radius: 4px; text-align: left; font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 14px; }
+.deliverable-item::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--mauve); flex-shrink: 0; }
+.deliverable-extra { margin-left: auto; font-size: 12px; color: var(--gold); white-space: nowrap; }
 
-/* ================================================================
-   EDITORIAL (HEY SWEETHEARTS)
-================================================================ */
-.editorial {
-  background: var(--mauve);
-  padding: 80px 40px;
-  display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  gap: 50px;
-  align-items: center;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-.editorial-images {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-.editorial-images img,
-.editorial-img-placeholder {
-  width: 100%;
-  aspect-ratio: 3/4;
-  object-fit: cover;
-  display: block;
-}
-.editorial-img-placeholder {
-  background: rgba(255,255,255,0.1);
-}
-.editorial-text {
-  color: rgba(255,255,255,0.9);
-}
-.editorial-text .tagline {
-  font-size: 12px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  opacity: 0.65;
-  margin-bottom: 12px;
-}
-.editorial-text h2 {
-  font-size: clamp(28px, 4vw, 44px);
-  color: white;
-  margin-bottom: 12px;
-  line-height: 1.1;
-}
-.editorial-text .sep {
-  width: 40px;
-  height: 1px;
-  background: rgba(255,255,255,0.35);
-  margin: 20px 0;
-}
-.editorial-text p {
-  font-size: 13.5px;
-  line-height: 1.9;
-  opacity: 0.8;
-  margin-bottom: 14px;
-}
+/* ── ADDITIONAL SERVICES ── */
+.addl-section { background: var(--blush); padding: 80px 40px; text-align: center; }
+.addl-section h2 { font-size: clamp(28px, 4vw, 40px); color: var(--mauve-dk); margin-bottom: 40px; }
+.addl-header { display: flex; justify-content: space-between; align-items: center; max-width: 720px; margin: 0 auto 16px; padding: 14px 20px; border-left: 3px solid var(--mauve); background: rgba(255,255,255,0.5); font-size: 13px; color: var(--muted); }
+.addl-list { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+.addl-item { background: rgba(255,255,255,0.7); border: 1px solid var(--border); padding: 20px 24px; border-radius: 4px; text-align: left; }
+.addl-item-name { font-size: 14.5px; color: var(--ink); margin-bottom: 10px; }
+.addl-item-footer { display: flex; align-items: center; gap: 12px; justify-content: flex-end; }
+.addl-qty { font-size: 13px; color: var(--muted); }
+.addl-price { font-size: 13px; color: var(--muted); }
+.addl-badge { background: var(--mauve); color: white; font-size: 11px; padding: 5px 16px; border-radius: 20px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 5px; }
 
-/* ================================================================
-   TERMS & CONDITIONS
-================================================================ */
-.terms-section {
-  background: var(--blush);
-  padding: 80px 40px;
-  text-align: center;
-}
-.terms-section h2 {
-  font-size: clamp(28px, 4vw, 40px);
-  color: var(--mauve-dk);
-  margin-bottom: 40px;
-}
-.terms-list {
-  max-width: 680px;
-  margin: 0 auto;
-  text-align: left;
-  counter-reset: terms;
-}
-.terms-list li {
-  counter-increment: terms;
-  font-size: 13.5px;
-  color: var(--muted);
-  line-height: 1.8;
-  padding: 10px 0 10px 48px;
-  border-bottom: 1px solid var(--border);
-  position: relative;
-  list-style: none;
-}
-.terms-list li::before {
-  content: counter(terms) '.';
-  position: absolute;
-  left: 0;
-  color: var(--mauve);
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 16px;
-  font-weight: 500;
-}
+/* ── EDITORIAL ── */
+.editorial { background: var(--mauve); padding: 80px 40px; display: grid; grid-template-columns: 1fr 1.2fr; gap: 50px; align-items: center; max-width: 1200px; margin: 0 auto; }
+.editorial-images { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.editorial-images img, .editorial-img-placeholder { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; }
+.editorial-img-placeholder { background: rgba(255,255,255,0.1); }
+.editorial-text { color: rgba(255,255,255,0.9); }
+.editorial-text .tagline { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.65; margin-bottom: 12px; }
+.editorial-text h2 { font-size: clamp(28px, 4vw, 44px); color: white; margin-bottom: 12px; line-height: 1.1; }
+.editorial-text .sep { width: 40px; height: 1px; background: rgba(255,255,255,0.35); margin: 20px 0; }
+.editorial-text p { font-size: 13.5px; line-height: 1.9; opacity: 0.8; margin-bottom: 14px; }
+
+/* ── TERMS ── */
+.terms-section { background: var(--blush); padding: 80px 40px; text-align: center; }
+.terms-section h2 { font-size: clamp(28px, 4vw, 40px); color: var(--mauve-dk); margin-bottom: 40px; }
+.terms-list { max-width: 680px; margin: 0 auto; text-align: left; counter-reset: terms; }
+.terms-list li { counter-increment: terms; font-size: 13.5px; color: var(--muted); line-height: 1.8; padding: 10px 0 10px 48px; border-bottom: 1px solid var(--border); position: relative; list-style: none; }
+.terms-list li::before { content: counter(terms) '.'; position: absolute; left: 0; color: var(--mauve); font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 500; }
 .terms-list li:last-child { border-bottom: none; }
 
-/* ================================================================
-   FOOTER
-================================================================ */
-.footer {
-  background: var(--mauve);
-  padding: 40px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 40px;
-}
-.footer-logo {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-.footer-logo svg {
-  width: 44px;
-  height: 44px;
-  opacity: 0.9;
-}
-.footer-brand-name {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 10px;
-  letter-spacing: 5px;
-  color: rgba(255,255,255,0.7);
-  text-transform: uppercase;
-}
-.footer-gallery {
-  display: flex;
-  gap: 6px;
-}
-.footer-gallery img,
-.footer-gallery-img {
-  width: 62px;
-  height: 62px;
-  object-fit: cover;
-  opacity: 0.85;
-}
-.footer-gallery-img {
-  background: rgba(255,255,255,0.15);
-}
-.footer-socials {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.footer-socials a {
-  color: rgba(255,255,255,0.7);
-  text-decoration: none;
-  font-size: 22px;
-  transition: opacity 0.2s;
-}
+/* ── FOOTER ── */
+.footer { background: var(--mauve); padding: 40px; display: flex; justify-content: center; align-items: center; gap: 40px; }
+.footer-logo { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.footer-logo svg { width: 44px; height: 44px; opacity: 0.9; }
+.footer-brand-name { font-family: 'Cormorant Garamond', serif; font-size: 10px; letter-spacing: 5px; color: rgba(255,255,255,0.7); text-transform: uppercase; }
+.footer-gallery { display: flex; gap: 6px; }
+.footer-gallery img { width: 62px; height: 62px; object-fit: cover; opacity: 0.85; }
+.footer-socials { display: flex; flex-direction: column; gap: 12px; }
+.footer-socials a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 22px; transition: opacity 0.2s; }
 .footer-socials a:hover { opacity: 1; color: white; }
 
-/* ================================================================
-   DOWNLOAD BUTTON
-================================================================ */
+/* ── DOWNLOAD FAB (right) ── */
 .download-fab {
   position: fixed;
   bottom: 32px;
@@ -856,14 +363,29 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
   z-index: 999;
   transition: background 0.2s, transform 0.15s;
 }
-.download-fab:hover {
-  background: var(--mauve-dk);
-  transform: translateY(-2px);
-}
+.download-fab:hover { background: var(--mauve-dk); transform: translateY(-2px); }
 
-/* ================================================================
-   RESPONSIVE
-================================================================ */
+/* ── SHARE TOAST (brief confirmation) ── */
+.share-toast {
+  position: fixed;
+  bottom: 96px;
+  right: 32px;
+  background: #1a1a2e;
+  color: white;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: 'Jost', sans-serif;
+  letter-spacing: 0.5px;
+  z-index: 1100;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+}
+.share-toast.show { opacity: 1; transform: translateY(0); }
+
+/* ── RESPONSIVE ── */
 @media (max-width: 768px) {
   .story { grid-template-columns: 1fr; }
   .story-image { padding-right: 0; }
@@ -872,10 +394,11 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
   .topbar { padding: 0 16px; }
   .topbar-nav { display: none; }
   .footer { flex-direction: column; gap: 24px; }
+  .topbar-share-btn span { display: none; }
+  .topbar-share-btn { padding: 8px 12px; }
 }
-
 @media print {
-  .topbar, .download-fab { display: none !important; }
+  .topbar, .download-fab, .quot-edit-fab, .share-toast { display: none !important; }
   .hero { height: 60vh; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
@@ -886,22 +409,34 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
 <!-- TOP NAV -->
 <nav class="topbar no-print" id="topbar">
   <div class="topbar-nav">
-    <a href="#proposal" onclick="scrollTo('proposal')">Proposal</a>
-    <a href="#gallery" onclick="scrollTo('gallery')">Gallery</a>
+    <a href="#proposal">Proposal</a>
+    <a href="#gallery">Gallery</a>
   </div>
+
   <div class="topbar-logo">AKASH</div>
-  <div class="topbar-price">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-    <span class="price-val">₹ {{ total_amount_display }}</span>
+
+  <div class="topbar-right">
+    <!-- PRICE DISPLAY -->
+    <div class="topbar-price">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span class="price-val">₹ {{ total_amount_display }}</span>
+    </div>
+
+    <!-- SHARE VIA WHATSAPP BUTTON -->
+    <button class="topbar-share-btn" onclick="shareOnWhatsApp()" title="Share quotation link on WhatsApp">
+      <!-- WhatsApp icon -->
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      </svg>
+      <span>Share</span>
+    </button>
   </div>
 </nav>
 
 <!-- HERO -->
 <section class="hero" id="proposal">
   <div class="hero-bg">
-    <img src="{% static 'images/qbanner.png' %}">
-         alt="Wedding photography hero"
-         style="width:100%;height:100%;object-fit:cover;opacity:0.6;display:block;">
+    <img src="{% static 'images/qbanner.png' %}" alt="Wedding photography hero" style="width:100%;height:100%;object-fit:cover;opacity:0.6;display:block;">
   </div>
   <div class="hero-overlay"></div>
   <div class="hero-content">
@@ -952,7 +487,7 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
       <small>View the Images</small>
     </div>
     <div class="gallery-item">
-    <img src="{% static 'images/qbanner.png' %}" alt="Vyshnavi & Koushik" class="gallery-img" loading="lazy">
+      <img src="{% static 'images/qbanner.png' %}" alt="Shruthi & Hanoop" class="gallery-img" loading="lazy">
       <h4>Shruthi &amp; Hanoop</h4>
       <small>View the Images</small>
     </div>
@@ -980,7 +515,8 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
   <h2>{{ lead.client_name }}</h2>
   <p>Thanks for Choosing US!</p>
 </section>
-<!-- VIDEO SHOWCASE SECTION -->
+
+<!-- VIDEO SHOWCASE -->
 <section class="video-section section">
   <h2>Our Films</h2>
   <p class="video-subtitle">Cinematic stories told through our lens</p>
@@ -989,25 +525,19 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
       <video autoplay muted loop playsinline>
         <source src="{% static 'images/video1.mp4' %}" type="video/mp4">
       </video>
-      <div class="video-overlay">
-        <span class="video-label">Wedding Film</span>
-      </div>
+      <div class="video-overlay"><span class="video-label">Wedding Film</span></div>
     </div>
     <div class="video-item">
       <video autoplay muted loop playsinline>
         <source src="{% static 'images/video2.mp4' %}" type="video/mp4">
       </video>
-      <div class="video-overlay">
-        <span class="video-label">Pre Wedding</span>
-      </div>
+      <div class="video-overlay"><span class="video-label">Pre Wedding</span></div>
     </div>
     <div class="video-item">
       <video autoplay muted loop playsinline>
-       <source src="{% static 'images/video3.mp4' %}" type="video/mp4">
+        <source src="{% static 'images/video3.mp4' %}" type="video/mp4">
       </video>
-      <div class="video-overlay">
-        <span class="video-label">Cinematic Reel</span>
-      </div>
+      <div class="video-overlay"><span class="video-label">Cinematic Reel</span></div>
     </div>
   </div>
 </section>
@@ -1017,7 +547,6 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
   <h2>Payment Price</h2>
   <p class="subtitle">Your total package cost</p>
   <div class="price-display">₹{{ total_amount_display }}</div>
-
   {% if pricing_data %}
   <div class="price-breakdown">
     {% if pricing_data.subtotal %}
@@ -1074,7 +603,7 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
 
 <!-- DELIVERABLES -->
 <section class="deliverables-section section">
-  <h2>Delivarables</h2>
+  <h2>Deliverables</h2>
   <div class="deliverables-list">
     {% for svc in selected_services %}
       {% for del in svc.deliverables %}
@@ -1089,7 +618,7 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
   </div>
 </section>
 
-<!-- ADDITIONAL SERVICES (extra crew / services beyond base) -->
+<!-- ADDITIONAL SERVICES -->
 {% if has_extras %}
 <section class="addl-section section">
   <h2>Additional Services</h2>
@@ -1121,20 +650,20 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
 </section>
 {% endif %}
 
-<!-- EDITORIAL / HEY SWEETHEARTS -->
+<!-- EDITORIAL -->
 <section class="section" style="background:var(--mauve);padding:0;">
   <div class="editorial">
     <div class="editorial-images">
-      <img src="https://images.unsplash.com/photo-1598902108854-10e335adac99?w=500&q=80&fit=crop" alt="Wedding editorial" class="editorial-img-placeholder" style="width:100%;aspect-ratio:3/4;object-fit:cover;display:block;" loading="lazy">
+      <img src="https://images.unsplash.com/photo-1598902108854-10e335adac99?w=500&q=80&fit=crop" alt="Wedding editorial" style="width:100%;aspect-ratio:3/4;object-fit:cover;display:block;" loading="lazy">
       <img src="https://images.unsplash.com/photo-1587271407850-8d438ca9fdf2?w=500&q=80&fit=crop" alt="Wedding editorial" style="width:100%;aspect-ratio:3/4;object-fit:cover;display:block;margin-top:30px;" loading="lazy">
     </div>
     <div class="editorial-text">
-      <p class="tagline">For weddings in Indian and beyond</p>
+      <p class="tagline">For weddings in India and beyond</p>
       <h2>Hey Sweethearts!</h2>
       <div class="sep"></div>
-      <p>Your wedding is more than just an event—it's a beautiful journey filled with emotions, traditions, and unforgettable moments. At Ethereal Frames, we specialize in capturing the essence of your big day, blending artistry with storytelling to preserve every detail with elegance and authenticity.</p>
+      <p>Your wedding is more than just an event—it's a beautiful journey filled with emotions, traditions, and unforgettable moments. At AR Akash Photography, we specialize in capturing the essence of your big day, blending artistry with storytelling to preserve every detail with elegance and authenticity.</p>
       <p>Whether you're celebrating an Indian wedding or a love story that transcends cultures, we are here to document every heartfelt moment.</p>
-      <p>From the intricate details of your bridal attire to the joyful tears of your loved ones, we specialize in preserving the beauty, traditions, and emotions that make your wedding unforgettable. Every frame we capture is a reflection of your unique journey—one that you can cherish for a lifetime.</p>
+      <p>From the intricate details of your bridal attire to the joyful tears of your loved ones, we specialize in preserving the beauty, traditions, and emotions that make your wedding unforgettable.</p>
     </div>
   </div>
 </section>
@@ -1165,10 +694,10 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
     <span class="footer-brand-name">AKASH</span>
   </div>
   <div class="footer-gallery">
-    <img src="https://images.unsplash.com/photo-1519741497674-611481863552?w=120&q=70&fit=crop" alt="Gallery thumbnail" style="width:62px;height:62px;object-fit:cover;opacity:0.85;" loading="lazy">
-    <img src="https://images.unsplash.com/photo-1583939411023-14783179e581?w=120&q=70&fit=crop" alt="Gallery thumbnail" style="width:62px;height:62px;object-fit:cover;opacity:0.85;" loading="lazy">
-    <img src="https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=120&q=70&fit=crop" alt="Gallery thumbnail" style="width:62px;height:62px;object-fit:cover;opacity:0.85;" loading="lazy">
-    <img src="https://images.unsplash.com/photo-1591604466107-ec97de577aff?w=120&q=70&fit=crop" alt="Gallery thumbnail" style="width:62px;height:62px;object-fit:cover;opacity:0.85;" loading="lazy">
+    <img src="https://images.unsplash.com/photo-1519741497674-611481863552?w=120&q=70&fit=crop" alt="" style="width:62px;height:62px;object-fit:cover;opacity:0.85;" loading="lazy">
+    <img src="https://images.unsplash.com/photo-1583939411023-14783179e581?w=120&q=70&fit=crop" alt="" style="width:62px;height:62px;object-fit:cover;opacity:0.85;" loading="lazy">
+    <img src="https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=120&q=70&fit=crop" alt="" style="width:62px;height:62px;object-fit:cover;opacity:0.85;" loading="lazy">
+    <img src="https://images.unsplash.com/photo-1591604466107-ec97de577aff?w=120&q=70&fit=crop" alt="" style="width:62px;height:62px;object-fit:cover;opacity:0.85;" loading="lazy">
   </div>
   <div class="footer-socials">
     <a href="#" aria-label="Instagram">
@@ -1180,19 +709,96 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
   </div>
 </footer>
 
-<!-- DOWNLOAD FAB -->
-<!-- <button class="download-fab no-print" onclick="downloadPDF()">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-  Download PDF
-</button> -->
-
-<!-- DOWNLOAD FAB -->
+<!-- DOWNLOAD FAB (bottom-right) -->
 <a class="download-fab no-print"
    href="{% url 'quotation_pdf' lead.id %}"
-   style="text-decoration:none;display:inline-flex;align-items:center;gap:8px;">
+   style="text-decoration:none;display:inline-flex;align-items:center;gap:8px;color:white;">
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
   Download PDF
 </a>
+
+<!-- EDIT FAB (bottom-left — open to EVERYONE, no staff gate) -->
+<button class="quot-edit-fab no-print" onclick="openQuotEdit()">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>
+  Edit Quotation
+</button>
+
+<!-- SHARE TOAST (brief confirmation message) -->
+<div class="share-toast no-print" id="shareToast">Opened WhatsApp ✓</div>
+
+<!-- CSRF TOKEN -->
+<input type="hidden" id="csrf_token" value="{{ csrf_token }}">
+
+<!-- EDIT DRAWER BACKDROP -->
+<div class="qed-backdrop" id="qedBackdrop" onclick="closeQuotEdit()"></div>
+
+<!-- EDIT DRAWER -->
+<div class="quot-edit-drawer" id="quotEditDrawer">
+  <div class="qed-header">
+    <div class="qed-header-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+    </div>
+    <div>
+      <div class="qed-header-title">Edit Quotation</div>
+      <div class="qed-header-sub">{{ lead.client_name }} · {{ lead.event_type }}</div>
+    </div>
+    <button class="qed-close" onclick="closeQuotEdit()">✕</button>
+  </div>
+
+  <div class="qed-toast" id="qedToast"></div>
+  <div class="qed-tabs" id="qedTabs"></div>
+  <div class="qed-body" id="qedBody"></div>
+
+  <div class="qed-footer">
+    <button class="qed-cancel-btn" onclick="closeQuotEdit()">Cancel</button>
+    <button class="qed-save-btn" id="qedSaveBtn" onclick="saveQuotEdit()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+      Save Changes ✓
+    </button>
+  </div>
+</div>
+
+<!-- DATA FOR JS -->
+<script>
+  window.QUOT_LEAD_ID  = {{ lead.id }};
+  window.QUOT_SERVICES = {{ selected_services_json|safe }};
+  window.QUOT_PRICING  = {{ pricing_json|safe }};
+
+  // WhatsApp share — sends the current page URL
+  function shareOnWhatsApp() {
+    const pageUrl  = window.location.href;
+    const client   = "{{ lead.client_name|escapejs }}";
+    const amount   = "₹ {{ total_amount_display }}";
+    const eventType = "{{ lead.event_type|escapejs }}";
+
+    const message =
+  `✨ *AR Akash Photography — Quotation*\n\n` +
+  `Dear ${client},\n\n` +
+  `Your personalised quotation for *${eventType}* is ready.\n` +
+  `*Total Amount: ${amount}*\n\n` +
+  `${pageUrl}\n\n` +
+  `_Thank you for choosing AR Akash Photography_ 📸`;
+
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank');
+
+    // Brief toast confirmation
+    const toast = document.getElementById('shareToast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+</script>
+
+<!-- EDIT DRAWER SCRIPT -->
+<script src="{% static 'js/quot_edit.js' %}"></script>
 
 </body>
 </html>

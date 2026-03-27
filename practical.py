@@ -175,6 +175,63 @@ print("b:" ,b)
 print(a,b)
 
 
+# ======================
+"""printing prime number """
+
+prime_num = 10
+if prime_num <= 1:
+    print("it is not a prime number")
+else:
+    is_prime = True
+    for i in range(2,int(prime_num**0.5)+1):
+        if prime_num % 2 == 0:
+            is_prime = False
+            break
+    if(is_prime):
+        print("it is a prime number")
+    else:
+        print("not a prime number")
+
+# if it is list of numbers
+prime_number = [10,11,12,13,14,15,16,17,18,19,20]
+for i in prime_number:
+    if i <= 1:
+        print("it is not a prime number")
+        continue
+    is_prime = True
+    for j in range(2,int(i**0.5)+1):
+        if i % 2 == 0:
+            is_prime = False
+            break
+    if(is_prime):
+        print(i)
+
+# if it is printing number from 1 to 100
+
+empty_prime = []
+for i in range(2,101):
+    if i <= 1:
+        print("it is not a prime number")
+        continue
+    is_prime = True
+    for j in range(2,int(i**0.5)+1):
+        if i % 2 == 0:
+            is_prime = False
+            break
+    if(is_prime):
+        empty_prime.append(i)
+print(empty_prime)
 
 
-
+# palidrome
+pal = 1234
+original = pal
+reverse_palinrome = 0
+while pal > 0:
+    digit = pal % 10
+    reverse_palinrome = reverse_palinrome*10 + digit
+    pal =  pal// 10
+if original == reverse_palinrome:
+    print("it is palindrome ")
+else:
+    print("it is not a palindrome")

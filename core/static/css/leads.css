@@ -6953,3 +6953,457 @@ input[name="total_amount"].pkg-auto-amount::placeholder {
     transform: rotate(45deg);
     border-radius: 2px 0 0 0;
 }
+/* ================================================================
+   NEW LEAD FORM — TWO COLUMN LAYOUT
+   ADD THESE STYLES TO leads.css
+   These only affect the Step 2 form layout. No other styles change.
+================================================================ */
+
+/* ── Wider modal for two-col layout ── */
+.lead-form.step-wide {
+    width: 900px !important;
+    max-width: 96vw !important;
+}
+
+/* ── TWO COLUMN GRID ── */
+.form-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    background: #fff;
+}
+
+/* ── EACH COLUMN ── */
+.form-col {
+    padding: 20px 22px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.form-col:first-child {
+    border-right: 1px solid #e5e7eb;
+}
+
+/* ── COLUMN HEADER ── */
+.form-col-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.form-col-header svg {
+    color: var(--primary, #8B1A1A);
+    flex-shrink: 0;
+}
+
+.form-col-header h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0;
+    letter-spacing: 0.2px;
+}
+
+/* ── INPUT WRAPPER (icon + input) ── */
+.col-input-wrap {
+    display: flex;
+    align-items: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    margin-bottom: 10px;
+    transition: border-color 0.18s, box-shadow 0.18s;
+    overflow: hidden;
+    min-height: 40px;
+}
+
+.col-input-wrap:focus-within {
+    border-color: var(--primary, #8B1A1A);
+    box-shadow: 0 0 0 3px rgba(139,26,26,0.07);
+}
+
+/* ── ICON inside input wrap ── */
+.col-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    flex-shrink: 0;
+    color: #9ca3af;
+}
+
+/* ── THE INPUT ITSELF ── */
+.col-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 10px 10px 10px 0;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: #1a1a2e;
+    background: transparent;
+    width: 100%;
+    min-width: 0;
+}
+
+.col-input::placeholder {
+    color: #b0b7c3;
+    font-size: 12px;
+}
+
+/* ── SELECT variant ── */
+.col-select {
+    padding: 10px 10px 10px 0;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+}
+
+/* ── READ-ONLY display fields (client name / phone / email shown in step 2) ── */
+.col-input-ro {
+    background: #f9fafb !important;
+    color: #6b7280;
+    cursor: default;
+}
+
+/* ── DATE RANGE row (start — end in one wrap) ── */
+.col-date-row {
+    gap: 0;
+}
+
+.col-date-half {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 6px;
+}
+
+.col-date-sep {
+    padding: 0 4px;
+    color: #9ca3af;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+/* ── Two selects side by side (session row) ── */
+.col-two-inputs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.col-two-inputs .col-input {
+    flex: 1;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px 28px 10px 10px;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: #1a1a2e;
+    background: #fff;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.col-two-inputs .col-input:focus {
+    border-color: var(--primary, #8B1A1A);
+    box-shadow: 0 0 0 3px rgba(139,26,26,0.07);
+}
+
+/* ── PACKAGE SECTION below the two columns ── */
+.form-section-pkg {
+    padding-top: 4px;
+}
+
+.form-section-pkg .field-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+/* ── Responsive: stack on small screens ── */
+@media (max-width: 700px) {
+    .form-two-col {
+        grid-template-columns: 1fr;
+    }
+    .form-col:first-child {
+        border-right: none;
+        border-bottom: 1px solid #e5e7eb;
+    }
+}
+/* ================================================================
+   LEADS FORM — NEW SINGLE-STEP LAYOUT
+   ADD THESE TO THE BOTTOM OF leads.css
+   (replaces/extends the previous two-col CSS if already added)
+================================================================ */
+/* ================================================================
+   LEADS FORM — NEW SINGLE-STEP LAYOUT
+   ADD THESE TO THE BOTTOM OF leads.css
+   (replaces/extends the previous two-col CSS if already added)
+================================================================ */
+
+/* ── Modal wider for two-col layout ── */
+.lead-form.step-wide {
+    width: 900px !important;
+    max-width: 96vw !important;
+}
+
+/* ── Remove progress wrapper when not needed ── */
+.progress-wrapper {
+    display: none !important;
+}
+
+/* ── TWO COLUMN GRID (Leads Details | Events Details) ── */
+.form-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 16px;
+    background: #fff;
+}
+
+.form-col {
+    padding: 18px 20px 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-col:first-child {
+    border-right: 1px solid #e5e7eb;
+}
+
+/* ── Column header ── */
+.form-col-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.form-col-header svg {
+    color: var(--primary, #8B1A1A);
+    flex-shrink: 0;
+}
+
+.form-col-header h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0;
+}
+
+/* ── Input wrapper with icon ── */
+.col-input-wrap {
+    display: flex;
+    align-items: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    margin-bottom: 9px;
+    min-height: 40px;
+    overflow: hidden;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.col-input-wrap:focus-within {
+    border-color: var(--primary, #8B1A1A);
+    box-shadow: 0 0 0 3px rgba(139,26,26,0.07);
+}
+
+.col-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    flex-shrink: 0;
+    color: #9ca3af;
+}
+
+.col-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 10px 10px 10px 0;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: #1a1a2e;
+    background: transparent;
+    min-width: 0;
+    width: 100%;
+}
+
+.col-input::placeholder {
+    color: #b0b7c3;
+    font-size: 12px;
+}
+
+/* ── Select ── */
+.col-select {
+    padding: 10px 28px 10px 0;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+}
+
+/* ── Date range row ── */
+.col-date-row {
+    gap: 0;
+}
+
+.col-date-half {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 6px;
+}
+
+.col-date-sep {
+    padding: 0 4px;
+    color: #9ca3af;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+/* ── Two selects side by side (sessions) ── */
+.col-two-inputs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 9px;
+}
+
+.col-two-inputs .col-input {
+    flex: 1;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px 28px 10px 10px;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: #1a1a2e;
+    background: #fff;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.col-two-inputs .col-input:focus {
+    border-color: var(--primary, #8B1A1A);
+    box-shadow: 0 0 0 3px rgba(139,26,26,0.07);
+    outline: none;
+}
+
+/* ── Package section: full width stack ── */
+.form-pkg-pricing-row {
+    display: block;
+    margin-bottom: 14px;
+}
+
+.form-pkg-left {
+    width: 100%;
+}
+
+/* ── Pricing block: below packages, half width, pinned to right ── */
+.form-pricing-right {
+    width: 50%;
+    margin-left: auto;   /* pushes it to the right side */
+    margin-top: 50px;
+}
+
+.form-pricing-right .field-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.form-pricing-right input[name="total_amount"] {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.form-pricing-right input[name="total_amount"]:focus {
+    border-color: var(--primary, #8B1A1A);
+    box-shadow: 0 0 0 3px rgba(139,26,26,0.07);
+}
+
+/* ── CREATE LEAD button only (no Back) ── */
+.form-actions-single {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 10px;
+    margin-top: 4px;
+    border-top: 1px solid #f3f4f6;
+}
+
+.form-actions-single button[type="submit"] {
+    padding: 12px 36px;
+    border-radius: 9px;
+    border: none;
+    background: var(--primary, #8B1A1A);
+    color: white;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 4px 14px rgba(139,26,26,0.28);
+    transition: background 0.15s, transform 0.1s;
+}
+
+.form-actions-single button[type="submit"]:hover {
+    background: #731616;
+    transform: translateY(-1px);
+}
+
+/* ── Responsive: stack on small screens ── */
+@media (max-width: 700px) {
+    .form-two-col {
+        grid-template-columns: 1fr;
+    }
+    .form-col:first-child {
+        border-right: none;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .form-pricing-right {
+        width: 100%;
+        margin-left: 0;
+    }
+    .lead-form.step-wide {
+        width: 95vw !important;
+    }
+}

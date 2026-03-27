@@ -194,6 +194,16 @@ function nextStep() {
     steps[currentStep].classList.add("active");
     stepIndicators[currentStep].classList.add("active");
     updateFormWidth();
+
+    const n  = document.querySelector('[name="client_name"]');
+    const p  = document.querySelector('[name="phone"]');
+    const e  = document.querySelector('[name="email"]');
+    const dn = document.getElementById('display_client_name');
+    const dp = document.getElementById('display_phone');
+    const de = document.getElementById('display_email');
+    if (dn && n) dn.value = n.value;
+    if (dp && p) dp.value = p.value;
+    if (de && e) de.value = e.value;
 }
 
 function prevStep() {
@@ -231,12 +241,13 @@ function closeLeadForm() {
         if (input) input.readOnly = false;
     });
 
+    currentStep = 0;
+    const steps = document.querySelectorAll(".form-step");
+    const stepIndicators = document.querySelectorAll(".progress-step");
     steps.forEach(step => step.classList.remove("active"));
     stepIndicators.forEach(step => step.classList.remove("active"));
-
-    currentStep = 0;
-    steps[0].classList.add("active");
-    stepIndicators[0].classList.add("active");
+    if (steps[0]) steps[0].classList.add("active");
+    if (stepIndicators[0]) stepIndicators[0].classList.add("active");
 
     updateFormWidth();
 
@@ -244,7 +255,6 @@ function closeLeadForm() {
     _editState = {};
     window.selectedPackageServices = [];
 
-    // Reset pricing state
     _pricing.subtotal = 0;
     _pricing.discountType = null;
     _pricing.discountValue = 0;
@@ -253,7 +263,6 @@ function closeLeadForm() {
     _pricing.gstAmount = 0;
     _pricing.finalTotal = 0;
 
-    // Unlock total_amount field
     const totalInput = document.querySelector('[name="total_amount"]');
     if (totalInput) {
         totalInput.readOnly = false;
@@ -283,12 +292,11 @@ document.getElementById("leadForm").addEventListener("submit", function (e) {
     if (!emailRegex.test(f.email.value.trim())) return showToast("Enter a valid email address");
     if (!f.event_type.value.trim()) return showToast("Event type is required");
     const _pkgDateCheck = window.validatePkgDates ? window.validatePkgDates() : true;
-if (_pkgDateCheck && _pkgDateCheck.error) return showToast(_pkgDateCheck.error);
+    if (_pkgDateCheck && _pkgDateCheck.error) return showToast(_pkgDateCheck.error);
     if (!f.follow_up_date.value) return showToast("Follow-up date is required");
     if (!f.event_location.value.trim()) return showToast("Event location is required");
     if (!f.total_amount.value) return showToast("Quoted amount is required");
 
-    // Capture form data BEFORE any reset
     const capturedData = {
         client_name: f.client_name.value.trim(),
         phone: f.phone.value.trim(),
@@ -303,7 +311,6 @@ if (_pkgDateCheck && _pkgDateCheck.error) return showToast(_pkgDateCheck.error);
         total_amount: f.total_amount.value,
         lead_id: document.getElementById("lead_id").value,
         selected_services: JSON.parse(JSON.stringify(window.selectedPackageServices || [])),
-        // pricing breakdown
         pricing: {
             subtotal: _pricing.subtotal,
             discountType: _pricing.discountType,
@@ -328,16 +335,13 @@ if (_pkgDateCheck && _pkgDateCheck.error) return showToast(_pkgDateCheck.error);
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            // Close lead form
             closeLeadForm();
             document.getElementById("leadModal").style.display = "none";
 
-            // Inject new card into NEW column instantly (no reload yet)
             if (!capturedData.lead_id) {
                 injectNewLeadCard(data.id, capturedData);
             }
 
-            // Show success modal with quotation options
             openLeadSuccessModal(capturedData, data.id);
         }
     });
@@ -360,16 +364,10 @@ function injectNewLeadCard(leadId, d) {
     card.className = "card card-new-flash";
     card.draggable = true;
     card.dataset.id = leadId;
-    
-    // ✅ ADD THIS
+
     if (d.selected_services?.length) {
         card.dataset.selectedServices = JSON.stringify(d.selected_services);
     }
-
-    const startDate = d.event_start_date || "";
-    const endDate = d.event_end_date || "";
-    const startSess = d.event_start_session || "";
-    const endSess = d.event_end_session || "";
 
     card.innerHTML = `
         <div class="card-title">
@@ -385,7 +383,6 @@ function injectNewLeadCard(leadId, d) {
         ${d.total_amount ? `<div class="card-row"><span>₹ Quoted : ₹ ${Number(d.total_amount).toLocaleString('en-IN')}</span></div>` : ""}
     `;
 
-    // Wire up drag events
     card.addEventListener("dragstart", () => {
         draggedCard = card;
         sourceColumn = card.parentElement;
@@ -396,7 +393,6 @@ function injectNewLeadCard(leadId, d) {
         draggedCard = null;
     });
 
-    // Insert at top of NEW column (after column-head)
     const head = col.querySelector(".column-head");
     if (head && head.nextSibling) {
         col.insertBefore(card, head.nextSibling);
@@ -404,11 +400,9 @@ function injectNewLeadCard(leadId, d) {
         col.appendChild(card);
     }
 
-    // Update count badge
     const countEl = col.querySelector(".column-head .count");
     if (countEl) countEl.innerText = col.querySelectorAll(".card").length;
 
-    // Animate in
     requestAnimationFrame(() => {
         card.style.opacity = "0";
         card.style.transform = "translateY(-20px) scale(0.95)";
@@ -423,23 +417,20 @@ function injectNewLeadCard(leadId, d) {
 
 // ===============================
 // GLOBAL PRICING STATE
-// discount & GST live here — shared between form & quotation
 // ===============================
 const _pricing = {
-    subtotal: 0,          // packages subtotal (no discount/tax)
-    discountType: null,   // 'percent' | 'flat' | null
-    discountValue: 0,     // number entered by admin
-    discountAmount: 0,    // computed ₹ discount
-    gstRate: 0,           // GST % (0, 5, 12, 18, 28)
-    gstAmount: 0,         // computed ₹ GST
-    finalTotal: 0         // what goes into total_amount field
+    subtotal: 0,
+    discountType: null,
+    discountValue: 0,
+    discountAmount: 0,
+    gstRate: 0,
+    gstAmount: 0,
+    finalTotal: 0
 };
 
-// Recompute _pricing from current subtotal
 function recalcPricing() {
     const sub = _pricing.subtotal;
 
-    // Discount
     if (_pricing.discountType === 'percent') {
         _pricing.discountAmount = Math.round(sub * _pricing.discountValue / 100);
     } else if (_pricing.discountType === 'flat') {
@@ -449,27 +440,21 @@ function recalcPricing() {
     }
 
     const afterDiscount = sub - _pricing.discountAmount;
-
-    // GST applied on discounted amount
     _pricing.gstAmount = Math.round(afterDiscount * _pricing.gstRate / 100);
-
     _pricing.finalTotal = afterDiscount + _pricing.gstAmount;
 
-    // Sync to form field
     const totalInput = document.querySelector('[name="total_amount"]');
     if (totalInput) totalInput.value = _pricing.finalTotal;
 
     renderPricingSummaryWidget();
 }
 
-// Called from syncSelectedServicesToWindow — keep subtotal fresh
 function updatePricingSubtotal(subtotal) {
     _pricing.subtotal = subtotal;
     recalcPricing();
     updateTotalAmountFieldState();
 }
 
-// Lock / unlock total_amount input based on whether packages are selected
 function updateTotalAmountFieldState() {
     const totalInput = document.querySelector('[name="total_amount"]');
     if (!totalInput) return;
@@ -486,14 +471,12 @@ function updateTotalAmountFieldState() {
 
 
 // ===============================
-// PRICING SUMMARY WIDGET (in lead form step 2)
+// PRICING SUMMARY WIDGET
 // ===============================
 function renderPricingSummaryWidget() {
     const wrap = document.getElementById('pricingSummaryWrap');
     if (!wrap) return;
 
-    // In edit mode, subtotal may be 0 momentarily before sync runs.
-    // Fall back to saved subtotal from pricing_data if available.
     const sub = _pricing.subtotal > 0
         ? _pricing.subtotal
         : (_pricing._savedSubtotal || 0);
@@ -566,7 +549,6 @@ function openDiscountPopup() {
     const pop = document.getElementById('discountPopup');
     if (!pop) return;
 
-    // Pre-fill saved values
     if (_pricing.discountType === 'percent') {
         pop.querySelector('[data-dtype="percent"]').classList.add('dp-type--active');
         pop.querySelector('[data-dtype="flat"]').classList.remove('dp-type--active');
@@ -583,7 +565,6 @@ function openDiscountPopup() {
         pop.querySelector('#discountValueInput').value = '';
     }
 
-    // Show current subtotal for reference
     const subRefEl = pop.querySelector('#dpSubRef');
     if (subRefEl) subRefEl.innerText = _pricing.subtotal.toLocaleString('en-IN');
 
@@ -678,7 +659,6 @@ function openTaxPopup() {
     const pop = document.getElementById('taxPopup');
     if (!pop) return;
 
-    // Mark current GST rate as active
     pop.querySelectorAll('[data-gst]').forEach(b => {
         b.classList.toggle('gst-chip--active', Number(b.dataset.gst) === _pricing.gstRate);
     });
@@ -769,14 +749,12 @@ function openLeadSuccessModal(leadData, leadId) {
     document.getElementById("successClientName").innerText = clientName;
     modal.style.display = "flex";
 
-    // Trigger animation
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
             modal.classList.add("visible");
         });
     });
 
-    // Animate checkmark
     setTimeout(() => {
         const check = modal.querySelector(".success-check-icon");
         if (check) check.classList.add("animated");
@@ -788,7 +766,6 @@ function closeLeadSuccessModal() {
     modal.classList.remove("visible");
     setTimeout(() => {
         modal.style.display = "none";
-        // Now reload to sync properly
         location.reload();
     }, 350);
 }
@@ -807,7 +784,6 @@ function shareQuotation() {
     const crew = services.flatMap(s => (s.crew || []).map(c => c));
     const crewText = crew.length ? `\n\n👥 *Crew:*\n${crew.map(c => `  • ${c}`).join('\n')}` : '';
 
-    // Pricing breakdown
     const p = d.pricing || {};
     let pricingText = `\n\n💰 *Pricing Breakdown:*`;
     pricingText += `\n  Sub Total : ₹${Number(p.subtotal || d.total_amount).toLocaleString('en-IN')}`;
@@ -851,7 +827,6 @@ function downloadQuotation() {
     const dateStr = today.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
     const quoteNo = `AK-${_successLeadId || String(today.getTime()).slice(-6)}`;
 
-    // Build service rows HTML
     let serviceRowsHTML = '';
     let grandTotal = 0;
 
@@ -889,7 +864,6 @@ function downloadQuotation() {
         `;
     }
 
-    // Pricing breakdown from captured data
     const p = d.pricing || {};
     const subtotal = p.subtotal || grandTotal;
     const discountAmount = p.discountAmount || 0;
@@ -919,400 +893,68 @@ function downloadQuotation() {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quotation ${quoteNo}</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --ink: #1a1a2e;
-    --accent: #8B1A1A;
-    --accent-light: #f8ece8;
-    --gold: #c9a84c;
-    --gold-light: #fdf6e3;
-    --muted: #6b7280;
-    --border: #e8e0d8;
-    --white: #ffffff;
-    --cream: #faf8f5;
-  }
-
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--cream);
-    color: var(--ink);
-    min-height: 100vh;
-    padding: 40px 20px;
-  }
-
-  .invoice-page {
-    max-width: 820px;
-    margin: 0 auto;
-    background: var(--white);
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 20px 60px rgba(26,26,46,0.12), 0 4px 16px rgba(26,26,46,0.06);
-  }
-
-  /* ── HEADER ── */
-  .inv-header {
-    background: var(--ink);
-    padding: 48px 52px 36px;
-    position: relative;
-    overflow: hidden;
-  }
-  .inv-header::before {
-    content: '';
-    position: absolute;
-    top: -60px; right: -60px;
-    width: 220px; height: 220px;
-    border-radius: 50%;
-    border: 40px solid rgba(201,168,76,0.15);
-  }
-  .inv-header::after {
-    content: '';
-    position: absolute;
-    bottom: -30px; left: 200px;
-    width: 120px; height: 120px;
-    border-radius: 50%;
-    border: 24px solid rgba(139,26,26,0.2);
-  }
-  .inv-header-inner {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    position: relative;
-    z-index: 1;
-  }
-  .inv-brand {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-  .inv-logo {
-    width: 56px; height: 56px;
-    background: linear-gradient(135deg, var(--accent), #c0392b);
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Playfair Display', serif;
-    font-size: 22px;
-    font-weight: 700;
-    color: white;
-    letter-spacing: -1px;
-    box-shadow: 0 4px 16px rgba(139,26,26,0.4);
-  }
-  .inv-brand-text h1 {
-    font-family: 'Playfair Display', serif;
-    font-size: 22px;
-    font-weight: 700;
-    color: white;
-    letter-spacing: 0.5px;
-  }
-  .inv-brand-text p {
-    font-size: 12px;
-    color: rgba(255,255,255,0.55);
-    margin-top: 2px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-  }
-  .inv-meta {
-    text-align: right;
-  }
-  .inv-meta .inv-tag {
-    display: inline-block;
-    background: var(--gold);
-    color: var(--ink);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    padding: 4px 12px;
-    border-radius: 20px;
-    margin-bottom: 8px;
-  }
-  .inv-meta .inv-number {
-    font-family: 'Playfair Display', serif;
-    font-size: 28px;
-    font-weight: 700;
-    color: white;
-    line-height: 1;
-  }
-  .inv-meta .inv-date {
-    font-size: 12px;
-    color: rgba(255,255,255,0.5);
-    margin-top: 4px;
-  }
-
-  /* ── GOLD RIBBON ── */
-  .inv-ribbon {
-    height: 4px;
-    background: linear-gradient(90deg, var(--accent) 0%, var(--gold) 50%, var(--accent) 100%);
-  }
-
-  /* ── BODY ── */
-  .inv-body {
-    padding: 44px 52px;
-  }
-
-  /* ── BILL TO / EVENT INFO ── */
-  .inv-info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 32px;
-    margin-bottom: 40px;
-    padding-bottom: 36px;
-    border-bottom: 1.5px solid var(--border);
-  }
-  .inv-info-block h4 {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 12px;
-  }
-  .inv-info-block .client-name {
-    font-family: 'Playfair Display', serif;
-    font-size: 22px;
-    font-weight: 600;
-    color: var(--ink);
-    margin-bottom: 6px;
-  }
-  .inv-info-block p {
-    font-size: 13.5px;
-    color: var(--muted);
-    line-height: 1.7;
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  .inv-info-block p span.icon {
-    font-size: 14px;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-
-  /* Event detail chips */
-  .event-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
-  }
-  .event-chip {
-    background: var(--accent-light);
-    color: var(--accent);
-    font-size: 11.5px;
-    font-weight: 500;
-    padding: 5px 12px;
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-
-  /* ── SERVICES TABLE ── */
-  .inv-table-wrap {
-    margin-bottom: 32px;
-  }
-  .inv-table-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--ink);
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .inv-table-title::after {
-    content: '';
-    flex: 1;
-    height: 1.5px;
-    background: linear-gradient(90deg, var(--border), transparent);
-  }
-  table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    border-radius: 12px;
-    overflow: hidden;
-    border: 1.5px solid var(--border);
-  }
-  thead tr {
-    background: var(--ink);
-  }
-  thead th {
-    padding: 14px 20px;
-    font-size: 10.5px;
-    font-weight: 600;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.7);
-    text-align: left;
-  }
-  thead th:last-child,
-  thead th:nth-child(2),
-  thead th:nth-child(3) {
-    text-align: right;
-  }
-  tbody tr.service-row {
-    border-bottom: 1px solid var(--border);
-    transition: background 0.2s;
-  }
-  tbody tr.service-row:last-child {
-    border-bottom: none;
-  }
-  tbody tr.service-row:nth-child(even) {
-    background: #fafaf9;
-  }
-  td {
-    padding: 18px 20px;
-    vertical-align: top;
-  }
+  :root { --ink: #1a1a2e; --accent: #8B1A1A; --accent-light: #f8ece8; --gold: #c9a84c; --gold-light: #fdf6e3; --muted: #6b7280; --border: #e8e0d8; --white: #ffffff; --cream: #faf8f5; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; padding: 40px 20px; }
+  .invoice-page { max-width: 820px; margin: 0 auto; background: var(--white); border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(26,26,46,0.12); }
+  .inv-header { background: var(--ink); padding: 48px 52px 36px; position: relative; overflow: hidden; }
+  .inv-header::before { content: ''; position: absolute; top: -60px; right: -60px; width: 220px; height: 220px; border-radius: 50%; border: 40px solid rgba(201,168,76,0.15); }
+  .inv-header-inner { display: flex; justify-content: space-between; align-items: flex-start; position: relative; z-index: 1; }
+  .inv-brand { display: flex; align-items: center; gap: 16px; }
+  .inv-logo { width: 56px; height: 56px; background: linear-gradient(135deg, var(--accent), #c0392b); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: white; }
+  .inv-brand-text h1 { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: white; }
+  .inv-brand-text p { font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 2px; letter-spacing: 1.5px; text-transform: uppercase; }
+  .inv-meta { text-align: right; }
+  .inv-meta .inv-tag { display: inline-block; background: var(--gold); color: var(--ink); font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; padding: 4px 12px; border-radius: 20px; margin-bottom: 8px; }
+  .inv-meta .inv-number { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: white; line-height: 1; }
+  .inv-meta .inv-date { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+  .inv-ribbon { height: 4px; background: linear-gradient(90deg, var(--accent) 0%, var(--gold) 50%, var(--accent) 100%); }
+  .inv-body { padding: 44px 52px; }
+  .inv-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 40px; padding-bottom: 36px; border-bottom: 1.5px solid var(--border); }
+  .inv-info-block h4 { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+  .inv-info-block .client-name { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+  .inv-info-block p { font-size: 13.5px; color: var(--muted); line-height: 1.7; display: flex; align-items: flex-start; gap: 8px; }
+  .event-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .event-chip { background: var(--accent-light); color: var(--accent); font-size: 11.5px; font-weight: 500; padding: 5px 12px; border-radius: 20px; }
+  .inv-table-wrap { margin-bottom: 32px; }
+  .inv-table-title { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 600; color: var(--ink); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+  .inv-table-title::after { content: ''; flex: 1; height: 1.5px; background: linear-gradient(90deg, var(--border), transparent); }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--border); }
+  thead tr { background: var(--ink); }
+  thead th { padding: 14px 20px; font-size: 10.5px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.7); text-align: left; }
+  thead th:last-child, thead th:nth-child(2), thead th:nth-child(3) { text-align: right; }
+  tbody tr.service-row { border-bottom: 1px solid var(--border); }
+  tbody tr.service-row:last-child { border-bottom: none; }
+  tbody tr.service-row:nth-child(even) { background: #fafaf9; }
+  td { padding: 18px 20px; vertical-align: top; }
   .svc-name { min-width: 260px; }
-  .svc-label {
-    font-size: 14.5px;
-    font-weight: 600;
-    color: var(--ink);
-    margin-bottom: 4px;
-  }
-  .svc-meta, .svc-del {
-    font-size: 11.5px;
-    color: var(--muted);
-    margin-top: 3px;
-    line-height: 1.5;
-  }
-  .svc-qty, .svc-price, .svc-total {
-    text-align: right;
-    font-size: 14px;
-  }
-  .svc-qty { color: var(--muted); }
-  .svc-price { color: var(--muted); }
-  .svc-total {
-    font-weight: 600;
-    color: var(--ink);
-  }
-
-  /* ── TOTALS ── */
-  .inv-totals {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 40px;
-  }
-  .inv-totals-box {
-    width: 300px;
-    background: var(--gold-light);
-    border-radius: 14px;
-    padding: 24px 28px;
-    border: 1.5px solid rgba(201,168,76,0.3);
-  }
-  .totals-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 7px 0;
-    font-size: 13.5px;
-    color: var(--muted);
-    border-bottom: 1px solid rgba(201,168,76,0.2);
-  }
-  .totals-row:last-child {
-    border-bottom: none;
-    padding-top: 14px;
-    margin-top: 6px;
-  }
-  .totals-row.grand {
-    font-family: 'Playfair Display', serif;
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--ink);
-  }
-  .totals-row.grand span:last-child {
-    color: var(--accent);
-  }
-
-  /* ── NOTES / TERMS ── */
-  .inv-notes {
-    background: var(--cream);
-    border-radius: 12px;
-    padding: 20px 24px;
-    margin-bottom: 36px;
-    border-left: 3px solid var(--gold);
-  }
-  .inv-notes h5 {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--gold);
-    margin-bottom: 8px;
-  }
-  .inv-notes p {
-    font-size: 12.5px;
-    color: var(--muted);
-    line-height: 1.7;
-  }
-
-  /* ── FOOTER ── */
-  .inv-footer {
-    background: var(--ink);
-    padding: 28px 52px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .inv-footer-left p {
-    font-size: 11.5px;
-    color: rgba(255,255,255,0.45);
-    line-height: 1.6;
-  }
-  .inv-footer-left strong {
-    color: rgba(255,255,255,0.7);
-  }
-  .inv-footer-right {
-    text-align: right;
-  }
-  .inv-footer-right .stamp {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(201,168,76,0.15);
-    border: 1px solid rgba(201,168,76,0.3);
-    border-radius: 8px;
-    padding: 8px 16px;
-    font-size: 11px;
-    color: var(--gold);
-    font-weight: 500;
-    letter-spacing: 0.5px;
-  }
-
-  .totals-row.totals-row--discount {
-    background: rgba(220,252,231,0.5);
-    border-radius: 6px;
-    padding: 6px 8px;
-  }
-  .totals-row.totals-row--after-discount {
-    padding: 4px 8px;
-    border-bottom: 1px dashed var(--border);
-  }
-  /* ── PRINT ── */
-  @media print {
-    body { background: white; padding: 0; }
-    .invoice-page {
-      box-shadow: none;
-      border-radius: 0;
-      max-width: 100%;
-    }
-    .no-print { display: none !important; }
-  }
+  .svc-label { font-size: 14.5px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+  .svc-meta, .svc-del { font-size: 11.5px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+  .svc-qty, .svc-price, .svc-total { text-align: right; font-size: 14px; }
+  .svc-qty { color: var(--muted); } .svc-price { color: var(--muted); }
+  .svc-total { font-weight: 600; color: var(--ink); }
+  .inv-totals { display: flex; justify-content: flex-end; margin-bottom: 40px; }
+  .inv-totals-box { width: 300px; background: var(--gold-light); border-radius: 14px; padding: 24px 28px; border: 1.5px solid rgba(201,168,76,0.3); }
+  .totals-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 13.5px; color: var(--muted); border-bottom: 1px solid rgba(201,168,76,0.2); }
+  .totals-row:last-child { border-bottom: none; padding-top: 14px; margin-top: 6px; }
+  .totals-row.grand { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; color: var(--ink); }
+  .totals-row.grand span:last-child { color: var(--accent); }
+  .inv-notes { background: var(--cream); border-radius: 12px; padding: 20px 24px; margin-bottom: 36px; border-left: 3px solid var(--gold); }
+  .inv-notes h5 { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+  .inv-notes p { font-size: 12.5px; color: var(--muted); line-height: 1.7; }
+  .inv-footer { background: var(--ink); padding: 28px 52px; display: flex; justify-content: space-between; align-items: center; }
+  .inv-footer-left p { font-size: 11.5px; color: rgba(255,255,255,0.45); line-height: 1.6; }
+  .inv-footer-left strong { color: rgba(255,255,255,0.7); }
+  .inv-footer-right .stamp { display: inline-flex; align-items: center; gap: 8px; background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.3); border-radius: 8px; padding: 8px 16px; font-size: 11px; color: var(--gold); font-weight: 500; }
+  .totals-row.totals-row--discount { background: rgba(220,252,231,0.5); border-radius: 6px; padding: 6px 8px; }
+  @media print { body { background: white; padding: 0; } .invoice-page { box-shadow: none; border-radius: 0; max-width: 100%; } }
 </style>
 </head>
 <body>
 <div class="invoice-page">
-
-  <!-- HEADER -->
   <div class="inv-header">
     <div class="inv-header-inner">
       <div class="inv-brand">
@@ -1329,14 +971,8 @@ function downloadQuotation() {
       </div>
     </div>
   </div>
-
-  <!-- GOLD RIBBON -->
   <div class="inv-ribbon"></div>
-
-  <!-- BODY -->
   <div class="inv-body">
-
-    <!-- BILL TO / EVENT -->
     <div class="inv-info-grid">
       <div class="inv-info-block">
         <h4>Billed To</h4>
@@ -1355,8 +991,6 @@ function downloadQuotation() {
         </div>
       </div>
     </div>
-
-    <!-- SERVICES TABLE -->
     <div class="inv-table-wrap">
       <div class="inv-table-title">Services & Packages</div>
       <table>
@@ -1368,42 +1002,23 @@ function downloadQuotation() {
             <th style="text-align:right">Amount</th>
           </tr>
         </thead>
-        <tbody>
-          ${serviceRowsHTML}
-        </tbody>
+        <tbody>${serviceRowsHTML}</tbody>
       </table>
     </div>
-
-    <!-- TOTALS -->
     <div class="inv-totals">
       <div class="inv-totals-box">
-        <div class="totals-row">
-          <span>Subtotal</span>
-          <span>₹${subtotal.toLocaleString('en-IN')}</span>
-        </div>
+        <div class="totals-row"><span>Subtotal</span><span>₹${subtotal.toLocaleString('en-IN')}</span></div>
         ${discountRowHTML}
-        ${discountAmount > 0 ? `
-        <div class="totals-row totals-row--after-discount">
-          <span style="color:#6b7280;font-size:12px">After Discount</span>
-          <span style="color:#6b7280;font-size:12px">₹${afterDiscount.toLocaleString('en-IN')}</span>
-        </div>` : ''}
+        ${discountAmount > 0 ? `<div class="totals-row totals-row--after-discount"><span style="color:#6b7280;font-size:12px">After Discount</span><span style="color:#6b7280;font-size:12px">₹${afterDiscount.toLocaleString('en-IN')}</span></div>` : ''}
         ${gstRowHTML}
-        <div class="totals-row grand">
-          <span>Total Amount</span>
-          <span>₹${finalTotal.toLocaleString('en-IN')}</span>
-        </div>
+        <div class="totals-row grand"><span>Total Amount</span><span>₹${finalTotal.toLocaleString('en-IN')}</span></div>
       </div>
     </div>
-
-    <!-- NOTES -->
     <div class="inv-notes">
       <h5>Terms & Notes</h5>
       <p>50% advance required to confirm booking. Balance due on event day. All packages include high-resolution digital delivery. Cancellation policy: 14 days notice required for full refund of advance.</p>
     </div>
-
   </div>
-
-  <!-- FOOTER -->
   <div class="inv-footer">
     <div class="inv-footer-left">
       <p><strong>AK Photography Studio</strong></p>
@@ -1413,12 +1028,10 @@ function downloadQuotation() {
       <div class="stamp">✦ Official Quotation</div>
     </div>
   </div>
-
 </div>
 </body>
 </html>`;
 
-    // Open in new window and trigger print-to-PDF
     const win = window.open('', '_blank');
     win.document.write(invoiceHTML);
     win.document.close();
@@ -1471,7 +1084,6 @@ function openEditLead(leadId) {
             document.querySelector('[name="event_location"]').value = lead.event_location;
             document.querySelector('[name="total_amount"]').value = lead.total_amount;
 
-            // ── Restore saved package selections ──────────────────────
             _selectedKeys = [];
             _editState = {};
             window.selectedPackageServices = [];
@@ -1502,7 +1114,6 @@ function openEditLead(leadId) {
 
                         _selectedKeys.push(key);
 
-                        // Rebuild crew from saved crewDetail (preferred) or legacy crew strings
                         let crew;
                         if (svc.crewDetail && Array.isArray(svc.crewDetail)) {
                             crew = svc.crewDetail.map(c => ({
@@ -1513,7 +1124,6 @@ function openEditLead(leadId) {
                                 isExtra: c.isExtra || false
                             }));
                         } else {
-                            // Legacy format: "Role x2" strings — treat all as base
                             crew = (svc.crew || []).map(c => {
                                 const parts = c.split(' x');
                                 const qty = parseInt(parts[1]) || 1;
@@ -1543,7 +1153,6 @@ function openEditLead(leadId) {
                 }
             }
 
-            // ── Restore pricing (discount + GST) ────────────────────
             if (lead.pricing_data) {
                 let p = lead.pricing_data;
                 if (typeof p === 'string') { try { p = JSON.parse(p); } catch(e) { p = {}; } }
@@ -1553,16 +1162,13 @@ function openEditLead(leadId) {
                 _pricing.gstRate         = p.gstRate        || 0;
                 _pricing.gstAmount       = p.gstAmount      || 0;
                 _pricing.finalTotal      = p.finalTotal     || 0;
-                _pricing._savedSubtotal  = p.subtotal       || 0;  // ← fallback for widget
-                // subtotal is recomputed by syncSelectedServicesToWindow below;
-                // _savedSubtotal lets the widget display correctly before that runs
+                _pricing._savedSubtotal  = p.subtotal       || 0;
             } else {
-                // no saved pricing — reset cleanly
                 _pricing.discountType = null; _pricing.discountValue = 0;
                 _pricing.discountAmount = 0;  _pricing.gstRate = 0;
                 _pricing.gstAmount = 0;       _pricing.finalTotal = 0;
             }
-            // ── Restore pkg dates BEFORE renderPackages so _buildDateRow sees them ──
+
             window._pkgDates = {};
             if (Array.isArray(lead.selected_services)) {
                 lead.selected_services.forEach(svc => {
@@ -1576,24 +1182,17 @@ function openEditLead(leadId) {
                 });
             }
 
-
             renderPackages();
 
-            // ── Force subtotal sync AFTER all packages are restored ──────
-            // renderPackages → renderSummaryBar does NOT call syncSelectedServicesToWindow,
-            // so we call it explicitly here to push the correct grandTotal into _pricing.
-            // We also call it in a rAF to ensure the DOM (pricingSummaryWrap) is fully
-            // visible before renderPricingSummaryWidget tries to show it.
             syncSelectedServicesToWindow();
             requestAnimationFrame(() => {
-                syncSelectedServicesToWindow();   // re-render widget after DOM paint
+                syncSelectedServicesToWindow();
             });
 
-            steps[0].classList.remove("active");
-            steps[1].classList.add("active");
-            stepIndicators[0].classList.remove("active");
-            stepIndicators[1].classList.add("active");
-            currentStep = 1;
+            const allSteps = document.querySelectorAll(".form-step");
+            allSteps.forEach(s => s.classList.remove("active"));
+            if (allSteps[0]) allSteps[0].classList.add("active");
+            currentStep = 0;
             updateFormWidth();
         });
 }
@@ -1658,14 +1257,6 @@ function applyFilters() {
                 params.append("event_type", cb.parentElement.textContent.trim());
             });
         }
-    });
-
-    document.querySelectorAll(".urgent, .upcoming, .safe").forEach(label => {
-        label.onclick = () => {
-            if (label.classList.contains("urgent")) params.set("priority", "urgent");
-            if (label.classList.contains("upcoming")) params.set("priority", "upcoming");
-            if (label.classList.contains("safe")) params.set("priority", "safe");
-        };
     });
 
     const searchInput = document.querySelector('.filter-section input[type="text"]');
@@ -1954,20 +1545,15 @@ function renderPackages() {
     const editBtn = document.getElementById('editPkgBtn');
     if (editBtn) editBtn.disabled = _selectedKeys.length === 0;
 }
+
+
 // ================================================================
 // PACKAGE DATE PICKER — per-package event dates
-// Add this block to dragdrop.js after the PACKAGE CATALOG section
-// OR load as a separate file after dragdrop.js
 // ================================================================
 
-// ── STATE: per-package dates ─────────────────────────────────────
-// Structure: { [packageKey]: { date: 'YYYY-MM-DD', session: 'Morning'|'Evening' } }
 window._pkgDates = {};
 
-// ── RENDER DATE ROWS ─────────────────────────────────────────────
-// Called every time _selectedKeys changes (after renderSummaryBar)
 function renderPkgDateRows() {
-    // Find or create the date container (placed right after pkgSummaryBar)
     let wrap = document.getElementById('pkgDatesWrap');
     if (!wrap) {
         const bar = document.getElementById('pkgSummaryBar');
@@ -1978,7 +1564,6 @@ function renderPkgDateRows() {
         bar.parentNode.insertBefore(wrap, bar.nextSibling);
     }
 
-    // Remove rows for deselected packages
     const existingKeys = [...wrap.querySelectorAll('.pkg-date-row')].map(r => r.dataset.key);
     existingKeys.forEach(k => {
         if (!_selectedKeys.includes(k)) {
@@ -1992,33 +1577,28 @@ function renderPkgDateRows() {
         }
     });
 
-    // Hide wrap if nothing selected
     if (_selectedKeys.length === 0) {
         wrap.style.display = 'none';
         return;
     }
     wrap.style.display = 'flex';
 
-    // Add/update rows for selected packages (preserve order)
     _selectedKeys.forEach((key, idx) => {
         let row = wrap.querySelector(`.pkg-date-row[data-key="${key}"]`);
         if (!row) {
             row = _buildDateRow(key);
-            // Insert at correct position
             const allRows = [...wrap.querySelectorAll('.pkg-date-row')];
             if (allRows[idx]) {
                 wrap.insertBefore(row, allRows[idx]);
             } else {
                 wrap.appendChild(row);
             }
-            // entrance animation
             requestAnimationFrame(() => {
                 row.style.transition = 'opacity .22s ease, transform .22s cubic-bezier(.34,1.4,.64,1)';
                 row.style.opacity = '1';
                 row.style.transform = 'translateY(0)';
             });
         } else {
-            // Update label in case it changed
             const lbl = row.querySelector('.pkg-date-card-head .pkg-date-label');
             if (lbl) lbl.textContent = PACKAGE_CATALOG[key]?.label || key;
         }
@@ -2042,30 +1622,14 @@ function _buildDateRow(key) {
             <div class="pkg-date-head-right">
                 <div class="pkg-conflict-dot hidden" id="pkgcdot-${key}" title="Date conflict detected"></div>
                 <label class="pkg-tbd-toggle" title="Mark date as not yet decided">
-                    <input
-                        type="checkbox"
-                        class="pkg-tbd-check"
-                        id="pkgtbd-${key}"
-                        ${isTBD ? 'checked' : ''}
-                        onchange="onPkgTbdChange('${key}', this.checked)"
-                    >
+                    <input type="checkbox" class="pkg-tbd-check" id="pkgtbd-${key}" ${isTBD ? 'checked' : ''} onchange="onPkgTbdChange('${key}', this.checked)">
                     <span class="pkg-tbd-label">TBD</span>
                 </label>
             </div>
         </div>
         <div class="pkg-date-inputs" id="pkginputs-${key}" ${isTBD ? 'style="display:none"' : ''}>
-            <input
-                type="date"
-                class="pkg-date-input"
-                id="pkgdate-${key}"
-                value="${saved.date || ''}"
-                onchange="onPkgDateChange('${key}', this.value)"
-            >
-            <select
-                class="pkg-session-select"
-                id="pkgsess-${key}"
-                onchange="onPkgSessionChange('${key}', this.value)"
-            >
+            <input type="date" class="pkg-date-input" id="pkgdate-${key}" value="${saved.date || ''}" onchange="onPkgDateChange('${key}', this.value)">
+            <select class="pkg-session-select" id="pkgsess-${key}" onchange="onPkgSessionChange('${key}', this.value)">
                 <option value="">Session</option>
                 <option value="Morning" ${saved.session === 'Morning' ? 'selected' : ''}>Morning</option>
                 <option value="Evening" ${saved.session === 'Evening' ? 'selected' : ''}>Evening</option>
@@ -2080,18 +1644,10 @@ function _buildDateRow(key) {
     return row;
 }
 
-// ── DATE / SESSION CHANGE HANDLERS ──────────────────────────────
 function onPkgDateChange(key, value) {
     if (!window._pkgDates[key]) window._pkgDates[key] = {};
     window._pkgDates[key].date = value;
-
-    // Fire conflict check only if date is set
-    if (value) {
-        _checkDateConflict(key, value);
-    } else {
-        _clearConflictDot(key);
-    }
-
+    if (value) { _checkDateConflict(key, value); } else { _clearConflictDot(key); }
     _syncPkgDatesToForm();
 }
 
@@ -2105,18 +1661,15 @@ function onPkgTbdChange(key, isTBD) {
     if (!window._pkgDates[key]) window._pkgDates[key] = {};
     window._pkgDates[key].tbd = isTBD;
 
-    const row       = document.querySelector(`.pkg-date-row[data-key="${key}"]`);
-    const inputs    = document.getElementById('pkginputs-' + key);
+    const row         = document.querySelector(`.pkg-date-row[data-key="${key}"]`);
+    const inputs      = document.getElementById('pkginputs-' + key);
     const placeholder = document.getElementById('pkgtbdph-' + key);
 
     if (isTBD) {
-        // Hide date inputs, show TBD placeholder
         if (inputs)      { inputs.style.opacity = '0'; setTimeout(() => { inputs.style.display = 'none'; }, 160); }
         if (placeholder) { placeholder.style.display = 'flex'; requestAnimationFrame(() => { placeholder.style.opacity = '1'; }); }
         if (row)         { row.classList.add('pkg-date-tbd'); row.classList.remove('has-conflict'); }
-        // Clear any conflict dot
         _clearConflictDot(key);
-        // Clear date/session so they don't pollute form fields
         window._pkgDates[key].date    = '';
         window._pkgDates[key].session = '';
         const dateInp = document.getElementById('pkgdate-' + key);
@@ -2124,7 +1677,6 @@ function onPkgTbdChange(key, isTBD) {
         if (dateInp) dateInp.value = '';
         if (sessInp) sessInp.value = '';
     } else {
-        // Show date inputs, hide TBD placeholder
         if (inputs)      { inputs.style.display = 'flex'; inputs.style.opacity = '0'; requestAnimationFrame(() => { inputs.style.opacity = '1'; }); }
         if (placeholder) { placeholder.style.opacity = '0'; setTimeout(() => { placeholder.style.display = 'none'; }, 160); }
         if (row)         { row.classList.remove('pkg-date-tbd'); }
@@ -2133,8 +1685,6 @@ function onPkgTbdChange(key, isTBD) {
     _syncPkgDatesToForm();
 }
 
-// ── SYNC DATES INTO selectedPackageServices ───────────────────────
-// Called after any date/session change so data flows into form submission
 function _syncPkgDatesToForm() {
     if (!window.selectedPackageServices) return;
     window.selectedPackageServices = window.selectedPackageServices.map(svc => {
@@ -2147,7 +1697,6 @@ function _syncPkgDatesToForm() {
         };
     });
 
-    // Also update _editState so syncSelectedServicesToWindow picks it up
     _selectedKeys.forEach(key => {
         const d = window._pkgDates[key] || {};
         if (_editState[key]) {
@@ -2157,10 +1706,6 @@ function _syncPkgDatesToForm() {
         }
     });
 
-    // Update form's event_start_date / event_end_date using ONLY confirmed (non-TBD) dates.
-    // EARLIEST confirmed date → event_start_date
-    // LATEST confirmed date   → event_end_date
-    // If ALL packages are TBD → clear both fields (blank is valid — sessions page handles it)
     const confirmedKeys = _selectedKeys.filter(k => {
         const d = window._pkgDates[k];
         return d && d.date && !d.tbd;
@@ -2183,7 +1728,6 @@ function _syncPkgDatesToForm() {
         if (endInput)   endInput.value   = window._pkgDates[latestKey].date;
         if (endSess)    endSess.value    = window._pkgDates[latestKey].session   || '';
     } else if (_selectedKeys.length > 0) {
-        // All packages are TBD — clear legacy date fields
         if (startInput) startInput.value = '';
         if (startSess)  startSess.value  = '';
         if (endInput)   endInput.value   = '';
@@ -2191,7 +1735,6 @@ function _syncPkgDatesToForm() {
     }
 }
 
-// ── CONFLICT CHECK ───────────────────────────────────────────────
 let _conflictCheckDebounce = {};
 
 function _checkDateConflict(key, date) {
@@ -2200,14 +1743,8 @@ function _checkDateConflict(key, date) {
         const csrf = document.getElementById('csrf_token')?.value || '';
         fetch('/leads/check-date-conflict/', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': csrf
-            },
-            body: new URLSearchParams({
-                date: date,
-                exclude_lead_id: document.getElementById('lead_id')?.value || ''
-            })
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrf },
+            body: new URLSearchParams({ date: date, exclude_lead_id: document.getElementById('lead_id')?.value || '' })
         })
         .then(r => r.json())
         .then(data => {
@@ -2218,8 +1755,8 @@ function _checkDateConflict(key, date) {
                 _clearConflictDot(key);
             }
         })
-        .catch(() => { /* silent — don't break form */ });
-    }, 400); // debounce 400ms
+        .catch(() => {});
+    }, 400);
 }
 
 function _showConflictDot(key) {
@@ -2236,7 +1773,6 @@ function _clearConflictDot(key) {
     if (row) row.classList.remove('has-conflict');
 }
 
-// ── CONFLICT ALERT POPUP ─────────────────────────────────────────
 let _dcaCurrentKey  = null;
 let _dcaCurrentDate = null;
 
@@ -2247,7 +1783,6 @@ function _showDateConflictPopup(key, date, conflicts) {
     const overlay = document.getElementById('dcaOverlay');
     if (!overlay) return;
 
-    // Format date nicely
     const fmtDate = (() => {
         try {
             const dt = new Date(date + 'T00:00:00');
@@ -2257,7 +1792,6 @@ function _showDateConflictPopup(key, date, conflicts) {
 
     const pkgLabel = PACKAGE_CATALOG[key]?.label || key;
 
-    // Fill conflict list
     const list = document.getElementById('dcaConflictsList');
     if (list) {
         list.innerHTML = conflicts.map(c => `
@@ -2271,13 +1805,11 @@ function _showDateConflictPopup(key, date, conflicts) {
         `).join('');
     }
 
-    // Fill summary text
     const subEl = document.getElementById('dcaSub');
     if (subEl) {
         subEl.innerHTML = `<strong>${fmtDate}</strong> is already booked for <strong>${pkgLabel}</strong>. You can still proceed or pick a different date.`;
     }
 
-    // Show popup
     overlay.classList.add('show');
     requestAnimationFrame(() => requestAnimationFrame(() => {
         overlay.querySelector('.dca-card').classList.add('pop');
@@ -2285,9 +1817,7 @@ function _showDateConflictPopup(key, date, conflicts) {
 }
 
 function dcaChangeDate() {
-    // Close popup — admin will manually pick another date
     _closeDcaPopup();
-    // Focus the date input for this package
     if (_dcaCurrentKey) {
         setTimeout(() => {
             const inp = document.getElementById('pkgdate-' + _dcaCurrentKey);
@@ -2297,7 +1827,6 @@ function dcaChangeDate() {
 }
 
 function dcaProceedAnyway() {
-    // Close popup — keep the date, just clear the visual warning
     _clearConflictDot(_dcaCurrentKey);
     _closeDcaPopup();
 }
@@ -2309,8 +1838,6 @@ function _closeDcaPopup() {
     setTimeout(() => overlay.classList.remove('show'), 320);
 }
 
-// ── PATCH: hook renderPkgDateRows into existing renderSummaryBar ──
-// We wrap the existing renderSummaryBar so date rows stay in sync
 (function() {
     const _origRenderSummaryBar = window.renderSummaryBar;
     if (typeof _origRenderSummaryBar === 'function') {
@@ -2321,13 +1848,11 @@ function _closeDcaPopup() {
     }
 })();
 
-// ── PATCH: hook into syncSelectedServicesToWindow to carry dates ──
 (function() {
     const _origSync = window.syncSelectedServicesToWindow;
     if (typeof _origSync === 'function') {
         window.syncSelectedServicesToWindow = function() {
             _origSync.apply(this, arguments);
-            // After sync, push dates + TBD flag into each service object
             if (window.selectedPackageServices) {
                 window.selectedPackageServices = window.selectedPackageServices.map(svc => {
                     const d = window._pkgDates[svc.key] || {};
@@ -2343,7 +1868,6 @@ function _closeDcaPopup() {
     }
 })();
 
-// ── PATCH: hook into closeLeadForm to reset date state ───────────
 (function() {
     const _origClose = window.closeLeadForm;
     if (typeof _origClose === 'function') {
@@ -2356,45 +1880,35 @@ function _closeDcaPopup() {
     }
 })();
 
-// ── RESTORE DATES when editing a lead ───────────────────────────
-// Called from openEditLead after services are restored.
-// Reads eventDate/eventSession from selected_services JSON.
 function restorePkgDatesFromLead(services) {
     window._pkgDates = {};
     if (!Array.isArray(services)) return;
     services.forEach(svc => {
         if (svc.key) {
-            // Handle both camelCase variants saved by different code paths
             const date    = svc.eventDate    || svc.event_date    || '';
             const session = svc.eventSession || svc.event_session || '';
             const tbd     = svc.dateTBD === true || svc.dateTBD === 'true' || false;
             window._pkgDates[svc.key] = { date, session, tbd };
         }
     });
-    // Re-render rows with restored values
     renderPkgDateRows();
-    // Apply values into DOM inputs after rows are built
     requestAnimationFrame(() => {
         Object.entries(window._pkgDates).forEach(([key, d]) => {
             const dateInp = document.getElementById('pkgdate-' + key);
             const sessInp = document.getElementById('pkgsess-' + key);
             const tbdInp  = document.getElementById('pkgtbd-'  + key);
-            if (dateInp && d.date)    dateInp.value   = d.date;
-            if (sessInp && d.session) sessInp.value   = d.session;
-            if (tbdInp  && d.tbd)    tbdInp.checked  = true;
-            // Trigger TBD visual state if needed
+            if (dateInp && d.date)    dateInp.value  = d.date;
+            if (sessInp && d.session) sessInp.value  = d.session;
+            if (tbdInp  && d.tbd)    tbdInp.checked = true;
             if (d.tbd) onPkgTbdChange(key, true);
         });
     });
 }
 
-// ── PATCH openEditLead to restore dates after load ───────────────
 (function() {
     const _origOpenEditLead = window.openEditLead;
     if (typeof _origOpenEditLead === 'function') {
         window.openEditLead = function(leadId) {
-            // Patch fetch inside openEditLead by intercepting renderPackages
-            // which is called after the fetch completes
             const _origRenderPackages = window.renderPackages;
             let _restored = false;
             window.renderPackages = function() {
@@ -2402,7 +1916,7 @@ function restorePkgDatesFromLead(services) {
                 if (!_restored && window.selectedPackageServices && window.selectedPackageServices.length > 0) {
                     _restored = true;
                     restorePkgDatesFromLead(window.selectedPackageServices);
-                    window.renderPackages = _origRenderPackages; // restore
+                    window.renderPackages = _origRenderPackages;
                 }
             };
             _origOpenEditLead.apply(this, arguments);
@@ -2410,20 +1924,13 @@ function restorePkgDatesFromLead(services) {
     }
 })();
 
-// ── Validate dates before form submit ───────────────────────────
-// Rules:
-//   ✅ date + session filled    → valid
-//   ✅ TBD checked              → valid (skip)
-//   ❌ date filled + no session → block ("Pick a session for X")
-//   ⚠  date empty + no TBD     → allowed (soft — not a hard block)
 function validatePkgDates() {
     if (_selectedKeys.length === 0) return true;
 
-    // Check for date-filled-but-missing-session (hard error)
     const missingSession = _selectedKeys.filter(k => {
         const d = window._pkgDates[k];
-        if (!d || d.tbd) return false;          // TBD → skip
-        return d.date && !d.session;             // date set, session missing
+        if (!d || d.tbd) return false;
+        return d.date && !d.session;
     });
 
     if (missingSession.length > 0) {
@@ -2439,21 +1946,18 @@ function validatePkgDates() {
         return { error: `Please select a session for: ${labels}` };
     }
 
-    // Warn (but allow) if ALL packages have no date and no TBD
     const allUndecided = _selectedKeys.every(k => {
         const d = window._pkgDates[k];
         return !d || (!d.date && !d.tbd);
     });
 
     if (allUndecided && _selectedKeys.length > 0) {
-        // Show a soft amber notice inside the form — do NOT block
         _showAllTbdNotice();
     }
 
-    return true; // always allow save
+    return true;
 }
 
-// Soft amber notice when EVERY package is undecided
 function _showAllTbdNotice() {
     let notice = document.getElementById('pkgAllTbdNotice');
     if (!notice) {
@@ -2467,7 +1971,6 @@ function _showAllTbdNotice() {
             No event dates confirmed yet — this lead will be marked as <strong>TBD</strong> in the sessions calendar.
         `;
         wrap.parentNode.insertBefore(notice, wrap.nextSibling);
-        // Auto-dismiss after 4s
         setTimeout(() => {
             notice.style.opacity = '0';
             setTimeout(() => notice.remove(), 400);
@@ -2475,19 +1978,13 @@ function _showAllTbdNotice() {
     }
 }
 
+const leadForm = document.getElementById('leadForm');
+if (leadForm) {
+    leadForm.addEventListener('submit', function(e) {
+    }, false);
+}
 
-    const leadForm = document.getElementById('leadForm');
-    if (leadForm) {
-        leadForm.addEventListener('submit', function(e) {
-            // Run before existing validators (capture phase = false, so existing runs first)
-            // Actually we patch the existing submit handler's showToast guard
-            // by checking in the same bubbling phase — the existing submit handler
-            // already calls e.preventDefault(), so we need to inject here.
-        }, false);
-    }
-
-    // Initial render in case packages are pre-selected on page load
-    renderPkgDateRows();
+renderPkgDateRows();
 
 
 // ===============================
@@ -2508,19 +2005,16 @@ function togglePackage(key, card) {
             }
         });
         _editState[key] = {
-            // crew array — each item: { role, qty, baseQty, pricePerHead, isExtra }
-            // baseQty  = qty included in package price (locked at selection time)
-            // isExtra  = true if this crew row was added manually (not in catalog)
             crew: pkg.crew.map(c => ({
                 role: c.role,
                 qty: c.qty,
-                baseQty: c.qty,       // ← remember original included qty
-                pricePerHead: 0,      // ← will be filled when user adds extra qty
+                baseQty: c.qty,
+                pricePerHead: 0,
                 isExtra: false
             })),
             deliverables: pkg.deliverables.map(d => ({ ...d, isExtra: false, extraPrice: 0 })),
-            extraCrewCost: 0,         // ← sum of all extra crew charges
-            extraDelCost: 0,          // ← sum of extra deliverable charges
+            extraCrewCost: 0,
+            extraDelCost: 0,
             teamRoles: autoTeamRoles
         };
         card.classList.add('selected');
@@ -2749,14 +2243,7 @@ function buildEpPane(key) {
     addCrewBtn.className = 'ep-add-btn';
     addCrewBtn.innerHTML = '＋ Add Crew Member';
     addCrewBtn.onclick = () => {
-        // New crew is always "extra" — needs a price per head
-        state.crew.push({
-            role: EP_CREW_ROLES[0],
-            qty: 1,
-            baseQty: 0,         // ← 0 means nothing is "included" for this row
-            pricePerHead: 0,    // ← user must fill this
-            isExtra: true
-        });
+        state.crew.push({ role: EP_CREW_ROLES[0], qty: 1, baseQty: 0, pricePerHead: 0, isExtra: true });
         refreshEpCrew(key);
         syncTeamRolesFromCrew(key);
     };
@@ -2862,11 +2349,7 @@ function buildEpPane(key) {
 // ===============================
 function buildEpCrewRow(key, i) {
     const c = _editState[key].crew[i];
-    const pkg = PACKAGE_CATALOG[key];
 
-    // Is this crew row "extra" in any way?
-    // Case 1: isExtra = true  → entirely new crew not in base package
-    // Case 2: qty > baseQty   → existing crew but qty increased beyond base
     const extraQty = Math.max(0, c.qty - c.baseQty);
     const hasExtraCharge = c.isExtra || extraQty > 0;
 
@@ -2874,29 +2357,17 @@ function buildEpCrewRow(key, i) {
     row.className = 'ep-crew-row' + (hasExtraCharge ? ' ep-crew-row--extra' : '');
     row.id = `ep-crow-${key}-${i}`;
 
-    // Badge shown on base-included crew
     const baseBadge = (!c.isExtra && c.qty <= c.baseQty)
         ? `<span class="ep-crew-badge ep-crew-badge--base">included</span>`
         : '';
 
-    // Price input shown whenever there's an extra charge
     const priceInput = hasExtraCharge ? `
         <div class="ep-crew-price-wrap">
             <span class="ep-crew-price-label">
-                ${c.isExtra
-                    ? `+${c.qty} person${c.qty > 1 ? 's' : ''} × ₹`
-                    : `+${extraQty} extra × ₹`}
+                ${c.isExtra ? `+${c.qty} person${c.qty > 1 ? 's' : ''} × ₹` : `+${extraQty} extra × ₹`}
             </span>
-            <input
-                type="number"
-                class="ep-crew-price-input"
-                id="ep-cprice-${key}-${i}"
-                placeholder="price/head"
-                min="0"
-                value="${c.pricePerHead || ''}"
-                onchange="epCrewPriceChange('${key}',${i},this.value)"
-                oninput="epCrewPriceChange('${key}',${i},this.value)"
-            >
+            <input type="number" class="ep-crew-price-input" id="ep-cprice-${key}-${i}" placeholder="price/head" min="0" value="${c.pricePerHead || ''}"
+                onchange="epCrewPriceChange('${key}',${i},this.value)" oninput="epCrewPriceChange('${key}',${i},this.value)">
         </div>` : '';
 
     row.innerHTML = `
@@ -2936,10 +2407,8 @@ function epCrewPriceChange(key, i, val) {
 
 function epChangeQty(key, i, delta) {
     const c = _editState[key].crew[i];
-    const oldQty = c.qty;
     c.qty = Math.max(1, Math.min(9, c.qty + delta));
 
-    // Update qty display with bounce animation
     const el = document.getElementById(`ep-qty-${key}-${i}`);
     if (el) {
         el.innerText = c.qty;
@@ -2948,27 +2417,23 @@ function epChangeQty(key, i, delta) {
         setTimeout(() => { el.style.transform = 'scale(1)'; el.style.color = ''; }, 180);
     }
 
-    // Rebuild the row so the price-input appears/disappears correctly
     refreshEpCrew(key);
     recalcCrewCost(key);
     syncSelectedServicesToWindow();
     syncTeamRolesFromCrew(key);
 }
 
-// ── Recalculate total extra-crew cost for a package key ──────────────────────
 function recalcCrewCost(key) {
     const state = _editState[key];
     let crewCost = 0;
-    const details = [];  // for label like "(+1 CP ×₹2000)"
+    const details = [];
 
     state.crew.forEach(c => {
         if (c.isExtra) {
-            // Entirely new crew — full qty × pricePerHead
             const charge = c.qty * (c.pricePerHead || 0);
             crewCost += charge;
             if (charge > 0) details.push(`+${c.qty} ${c.role.split(' ').map(w=>w[0]).join('')} ×₹${c.pricePerHead.toLocaleString('en-IN')}`);
         } else {
-            // Base crew — only charge for qty ABOVE baseQty
             const extraQty = Math.max(0, c.qty - c.baseQty);
             const charge = extraQty * (c.pricePerHead || 0);
             crewCost += charge;
@@ -2979,7 +2444,6 @@ function recalcCrewCost(key) {
     state.extraCrewCost = crewCost;
     updateEpBlockPrice(key);
 
-    // Update crew-charge label
     const labelEl = document.getElementById('ep-crewlabel-' + key);
     if (labelEl) labelEl.innerText = details.length ? `(${details.join(', ')})` : '';
 }
@@ -3067,7 +2531,6 @@ function updateEpBlockPrice(key) {
     const delExtra  = state.extraDelCost  || 0;
     const total = base + crewExtra + delExtra;
 
-    // Crew row
     const crewRow = document.getElementById('ep-crewrow-' + key);
     const crewVal = document.getElementById('ep-crewval-' + key);
     if (crewRow) crewRow.style.display = crewExtra > 0 ? 'flex' : 'none';
@@ -3078,13 +2541,11 @@ function updateEpBlockPrice(key) {
         setTimeout(() => crewVal.style.transform = 'scale(1)', 150);
     }
 
-    // Deliverables row
     const extraRow = document.getElementById('ep-extrarow-' + key);
     const extraVal = document.getElementById('ep-extraval-' + key);
     if (extraRow) extraRow.style.display = delExtra > 0 ? 'flex' : 'none';
     if (extraVal) extraVal.innerText = '₹' + delExtra.toLocaleString('en-IN');
 
-    // Total
     const subVal = document.getElementById('ep-subval-' + key);
     if (subVal) {
         subVal.innerText = '₹' + total.toLocaleString('en-IN');
@@ -3131,11 +2592,7 @@ function syncSelectedServicesToWindow() {
             extraDelCost: state.extraDelCost || 0,
             crew: state.crew.map(c => `${c.role} x${c.qty}`),
             crewDetail: state.crew.map(c => ({
-                role: c.role,
-                qty: c.qty,
-                baseQty: c.baseQty,
-                isExtra: c.isExtra,
-                pricePerHead: c.pricePerHead || 0
+                role: c.role, qty: c.qty, baseQty: c.baseQty, isExtra: c.isExtra, pricePerHead: c.pricePerHead || 0
             })),
             deliverables: state.deliverables.map(d => d.label),
             teamRoles: (state.teamRoles || []).map(r => r.role),
@@ -3144,11 +2601,10 @@ function syncSelectedServicesToWindow() {
     });
 
     const grandTotal = _selectedKeys.reduce((sum, k) => {
-            const s = _editState[k];
-            return sum + PACKAGE_CATALOG[k].price + (s?.extraCrewCost || 0) + (s?.extraDelCost || 0);
-        }, 0);
+        const s = _editState[k];
+        return sum + PACKAGE_CATALOG[k].price + (s?.extraCrewCost || 0) + (s?.extraDelCost || 0);
+    }, 0);
 
-    // Push into pricing engine (discount + GST live here)
     updatePricingSubtotal(grandTotal);
 }
 
@@ -3170,60 +2626,26 @@ function savePkgEditPanel() {
 // TEAM ROLES
 // ===============================
 const ROLE_ABBR = {
-    'Traditional Photographer': 'TP',
-    'Candid Photographer': 'CP',
-    'Traditional Videographer': 'TV',
-    'Candid Videographer': 'CV',
-    'Photographer': 'PH',
-    'Videographer': 'VG',
-    'Drone Operator': 'DR',
-    'Cinematic Videographer': 'CI',
+    'Traditional Photographer': 'TP', 'Candid Photographer': 'CP',
+    'Traditional Videographer': 'TV', 'Candid Videographer': 'CV',
+    'Photographer': 'PH', 'Videographer': 'VG',
+    'Drone Operator': 'DR', 'Cinematic Videographer': 'CI',
 };
 
 const ROLE_COLORS = {
-    'Traditional Photographer': '#8B1A1A',
-    'Candid Photographer': '#1a4e8b',
-    'Traditional Videographer': '#1a6b3a',
-    'Candid Videographer': '#7a4e1a',
-    'Photographer': '#8B1A1A',
-    'Videographer': '#1a6b3a',
-    'Drone Operator': '#4a1a8b',
-    'Cinematic Videographer': '#8b1a6b',
+    'Traditional Photographer': '#8B1A1A', 'Candid Photographer': '#1a4e8b',
+    'Traditional Videographer': '#1a6b3a', 'Candid Videographer': '#7a4e1a',
+    'Photographer': '#8B1A1A', 'Videographer': '#1a6b3a',
+    'Drone Operator': '#4a1a8b', 'Cinematic Videographer': '#8b1a6b',
 };
-
-// function syncTeamRolesFromCrew(key) {
-//     const state = _editState[key];
-//     if (!state) return;
-
-//     const newRoles = [];
-//     state.crew.forEach(c => {
-//         for (let q = 0; q < c.qty; q++) {
-//             newRoles.push({ role: c.role, assigned: null });
-//         }
-//     });
-
-//     const crewRoleSet = new Set(state.crew.map(c => c.role));
-//     (state.teamRoles || []).forEach(r => {
-//         if (!crewRoleSet.has(r.role)) newRoles.push({ ...r });
-//     });
-
-//     state.teamRoles = newRoles;
-
-//     const section = document.getElementById('ep-team-section-' + key);
-//     if (section) renderTeamRoleBadges(key, section);
-// }
 
 function syncTeamRolesFromCrew(key) {
     const state = _editState[key];
     if (!state) return;
 
-    // Count total slots needed per role from current crew
     const crewMap = {};
-    state.crew.forEach(c => {
-        crewMap[c.role] = (crewMap[c.role] || 0) + c.qty;
-    });
+    state.crew.forEach(c => { crewMap[c.role] = (crewMap[c.role] || 0) + c.qty; });
 
-    // Preserve existing assigned values per role
     const existingByRole = {};
     (state.teamRoles || []).forEach(r => {
         if (!existingByRole[r.role]) existingByRole[r.role] = [];
@@ -3232,7 +2654,6 @@ function syncTeamRolesFromCrew(key) {
 
     const newRoles = [];
 
-    // Add slots for each crew role (exactly qty times)
     Object.entries(crewMap).forEach(([role, qty]) => {
         const prev = existingByRole[role] || [];
         for (let q = 0; q < qty; q++) {
@@ -3240,16 +2661,8 @@ function syncTeamRolesFromCrew(key) {
         }
     });
 
-   // Keep manually-added team roles ONLY if they were added via addTeamRole button
-    // AND their role is not already covered by crew (avoids ghost badges on crew removal)
     const crewRoleSet = new Set(Object.keys(crewMap));
-    const crewDerivedRoles = new Set(
-        (state.crew || []).flatMap(c => 
-            Array.from({ length: c.qty }, () => c.role)
-        )
-    );
     (state.teamRoles || []).forEach(r => {
-        // Only keep if: not in current crew AND was manually added (not crew-derived)
         if (!crewRoleSet.has(r.role) && r._manual === true) {
             newRoles.push({ ...r });
         }
@@ -3259,6 +2672,7 @@ function syncTeamRolesFromCrew(key) {
     const section = document.getElementById('ep-team-section-' + key);
     if (section) renderTeamRoleBadges(key, section);
 }
+
 function renderTeamRoleBadges(key, container) {
     container.innerHTML = '';
     const state = _editState[key];
@@ -3276,7 +2690,6 @@ function renderTeamRoleBadges(key, container) {
 
         const wrap = document.createElement('div');
         wrap.className = 'ep-role-badge-wrap';
-        wrap.style.cssText = `--anim-delay:${i * 60}ms`;
         wrap.style.animationDelay = `${i * 60}ms`;
 
         wrap.innerHTML = `
@@ -3324,10 +2737,7 @@ function showRoleDropdown(key, triggerBtn) {
         const abbr = ROLE_ABBR[role] || role.slice(0, 2).toUpperCase();
         const color = ROLE_COLORS[role] || '#8B1A1A';
         item.innerHTML = `<span class="ep-role-dd-dot" style="background:${color}">${abbr}</span>${role}`;
-        item.onclick = () => {
-            addTeamRole(key, role);
-            dropdown.remove();
-        };
+        item.onclick = () => { addTeamRole(key, role); dropdown.remove(); };
         dropdown.appendChild(item);
     });
 
@@ -3347,9 +2757,7 @@ function addTeamRole(key, role) {
     const state = _editState[key];
     if (!state) return;
     if (!state.teamRoles) state.teamRoles = [];
-
     state.teamRoles.push({ role: role, assigned: null, _manual: true });
-
     const section = document.getElementById('ep-team-section-' + key);
     if (section) renderTeamRoleBadges(key, section);
     syncSelectedServicesToWindow();
@@ -3393,9 +2801,7 @@ function addCrewRow(role = "", qty = 1) {
     const row = document.createElement("div");
     row.className = "sc-crew-row";
 
-    let options = CREW_ROLES.map(r =>
-        `<option ${r === role ? "selected" : ""}>${r}</option>`
-    ).join("");
+    let options = CREW_ROLES.map(r => `<option ${r === role ? "selected" : ""}>${r}</option>`).join("");
 
     row.innerHTML = `
         <select class="sc-crew-select">${options}</select>
@@ -3500,9 +2906,7 @@ function saveService() {
     _selectedKeys.push(key);
     const autoTeamRoles = [];
     crew.forEach(c => {
-        for (let q = 0; q < c.qty; q++) {
-            autoTeamRoles.push({ role: c.role, assigned: null });
-        }
+        for (let q = 0; q < c.qty; q++) { autoTeamRoles.push({ role: c.role, assigned: null }); }
     });
     _editState[key] = {
         crew: crew.map(c => ({ ...c })),
@@ -3567,32 +2971,24 @@ function addExtraDeliverable() {
 document.addEventListener("DOMContentLoaded", () => {
     renderPackages();
 });
+
+
 // ================================================================
 // LEAD ACCEPTANCE FLOW
-// Replaces the old payment modal when dragging to ACCEPTED column
 // ================================================================
-// Override the existing drop handler's ACCEPTED logic
-// We inject ourselves via a patched openPaymentModal function
 
-// Stub: old payment modal is removed — keep this so no reference errors
 function closeModal() { /* no-op: payment modal replaced by acceptance flow */ }
 function closePaymentModal() { /* no-op */ }
 
-// ── STATE ─────────────────────────────────────────────────────────
 let _acceptLeadId   = null;
-let _acceptLeadData = null;   // full lead object fetched from server
+let _acceptLeadData = null;
 let _paidAmountVal  = 0;
 
-// ── PATCH: intercept openPaymentModal ─────────────────────────────
-// The existing dragdrop.js calls openPaymentModal(leadId) when a card
-// is dropped on ACCEPTED. We override that function here (this file
-// must be loaded AFTER dragdrop.js).
 function openPaymentModal(leadId) {
     _acceptLeadId = leadId;
     _fetchLeadAndShowConfirm(leadId);
 }
 
-// ── STEP 1 : CONFIRM DIALOG ───────────────────────────────────────
 function _fetchLeadAndShowConfirm(leadId) {
     fetch(`/leads/get/${leadId}/`)
         .then(r => r.json())
@@ -3613,7 +3009,6 @@ function _showAcceptConfirm() {
 }
 
 function acConfirmNo() {
-    // Revert the card back to its original column
     const card = document.querySelector(`.card[data-id="${_acceptLeadId}"]`);
     if (card) {
         const newCol = document.querySelector('.column[data-status="NEW"]') ||
@@ -3641,12 +3036,10 @@ function _closeAcceptConfirm() {
     setTimeout(() => overlay.classList.remove('show'), 280);
 }
 
-// ── STEP 2 : FULL LEAD PREVIEW MODAL ─────────────────────────────
 function _buildAndShowPreview() {
-    const lead    = _acceptLeadData;
-    const modal   = document.getElementById('leadPreviewModal');
+    const lead  = _acceptLeadData;
+    const modal = document.getElementById('leadPreviewModal');
 
-    // ── Header ──
     const _hdrTitle = document.getElementById('lpHeaderTitle');
     if (_hdrTitle) _hdrTitle.textContent = lead.client_name || 'Lead Preview';
     document.getElementById('lpClientName').textContent = lead.client_name;
@@ -3667,17 +3060,11 @@ function _buildAndShowPreview() {
         document.getElementById('lpFollowupRow').style.display = 'none';
     }
 
-    // ── Services / Packages ──
     _buildServicesTable(lead.selected_services || []);
-
-    // ── Pricing ──
     _renderLpPricing(lead);
-
-    // ── Payment section ──
     _paidAmountVal = parseFloat(lead.paid_amount || 0);
     _renderPaymentSection();
 
-    // Show modal
     modal.classList.add('show');
     requestAnimationFrame(() => requestAnimationFrame(() => {
         modal.querySelector('.lpm-wrap').classList.add('in');
@@ -3695,23 +3082,16 @@ function _buildServicesTable(services) {
 
     services.forEach((svc, idx) => {
         const price = Number(svc.price) || 0;
-        // crew strings
-        const crewList = (svc.crew || []).join(', ') || '—';
-        // deliverables
-        const delList  = (svc.deliverables || []).join(', ') || '—';
-
         const tr = document.createElement('tr');
         tr.style.animationDelay = `${idx * 60}ms`;
         tr.innerHTML = `
             <td>
                 <div class="lp-svc-name">${svc.label}</div>
-             
-<div class="lp-svc-meta">
-   
-    ${(svc.crew || []).map(c => `<div class="lp-meta-item">${c}</div>`).join('')}
-    <div class="lp-meta-label" style="margin-top:5px">Deliverables</div>
-    ${(svc.deliverables || []).map(d => `<div class="lp-meta-item">${d}</div>`).join('')}
-</div>
+                <div class="lp-svc-meta">
+                    ${(svc.crew || []).map(c => `<div class="lp-meta-item">${c}</div>`).join('')}
+                    <div class="lp-meta-label" style="margin-top:5px">Deliverables</div>
+                    ${(svc.deliverables || []).map(d => `<div class="lp-meta-item">${d}</div>`).join('')}
+                </div>
             </td>
             <td class="lp-td-center">1</td>
             <td class="lp-td-right">₹${price.toLocaleString('en-IN')}</td>
@@ -3728,15 +3108,13 @@ function _renderLpPricing(lead) {
     const gst = p.gstAmount     || 0;
     const tot = p.finalTotal    || Number(lead.total_amount) || sub;
 
-    document.getElementById('lpSubtotal').textContent     = `₹${sub.toLocaleString('en-IN')}`;
-    document.getElementById('lpTotalFinal').textContent   = `₹${tot.toLocaleString('en-IN')}`;
+    document.getElementById('lpSubtotal').textContent   = `₹${sub.toLocaleString('en-IN')}`;
+    document.getElementById('lpTotalFinal').textContent = `₹${tot.toLocaleString('en-IN')}`;
 
     const disRow = document.getElementById('lpDiscountRow');
     if (dis > 0) {
         disRow.style.display = '';
-        const label = p.discountType === 'percent'
-            ? `Discount (${p.discountValue}%)`
-            : 'Flat Discount';
+        const label = p.discountType === 'percent' ? `Discount (${p.discountValue}%)` : 'Flat Discount';
         document.getElementById('lpDiscountLabel').textContent = label;
         document.getElementById('lpDiscountVal').textContent   = `−₹${dis.toLocaleString('en-IN')}`;
     } else {
@@ -3768,12 +3146,10 @@ function _renderPaymentSection() {
     bar.style.width = pct + '%';
     document.getElementById('lpPayPct').textContent = pct + '%';
 
-    // Remaining badge color
     const remEl = document.getElementById('lpPayRemaining');
     remEl.style.color = remaining === 0 ? '#16a34a' : '#8B1A1A';
 }
 
-// ── MAKE PAYMENT POPUP ────────────────────────────────────────────
 function lpOpenMakePayment() {
     const lead  = _acceptLeadData;
     const total = Number((lead.pricing_data && lead.pricing_data.finalTotal) || lead.total_amount || 0);
@@ -3802,8 +3178,8 @@ function lpSubmitPayment() {
     const toast = document.getElementById('lpMpToast');
 
     toast.style.display = 'none';
-    if (paid < 0)       { toast.textContent = 'Amount cannot be negative'; toast.style.display='block'; return; }
-    if (paid > total)   { toast.textContent = 'Advance cannot exceed total'; toast.style.display='block'; return; }
+    if (paid < 0)     { toast.textContent = 'Amount cannot be negative'; toast.style.display='block'; return; }
+    if (paid > total) { toast.textContent = 'Advance cannot exceed total'; toast.style.display='block'; return; }
 
     _paidAmountVal = paid;
     _acceptLeadData.paid_amount = paid;
@@ -3811,32 +3187,22 @@ function lpSubmitPayment() {
     lpCloseMakePayment();
 }
 
-// ── ACCEPT (FINALIZE) ─────────────────────────────────────────────
 function lpAcceptLead() {
     const lead  = _acceptLeadData;
     const total = Number((lead.pricing_data && lead.pricing_data.finalTotal) || lead.total_amount || 0);
     const paid  = _paidAmountVal;
-
     const csrf = document.getElementById('csrf_token').value;
 
-    // 1. Update status + payment
     fetch('/leads/update-status/', {
         method: 'POST',
         headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-            lead_id:      _acceptLeadId,
-            status:       'ACCEPTED',
-            total_amount: total,
-            paid_amount:  paid
-        })
+        body: new URLSearchParams({ lead_id: _acceptLeadId, status: 'ACCEPTED', total_amount: total, paid_amount: paid })
     })
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            // 2. Auto-create invoice via existing endpoint
             _autoCreateInvoice(_acceptLeadId);
 
-            // 3. Update card on board
             const card = document.querySelector(`.card[data-id="${_acceptLeadId}"]`);
             if (card) {
                 const existing = card.querySelector('.paid-row');
@@ -3853,265 +3219,69 @@ function lpAcceptLead() {
             }
 
             _closePreviewModal();
-            // reload to sync everything
             setTimeout(() => location.reload(), 400);
         }
     });
 }
 
-// ── AUTO-CREATE INVOICE ───────────────────────────────────────────
 function _autoCreateInvoice(leadId) {
-    // Find a project linked to this lead (if any) via existing create_invoice endpoint
-    // We send to /invoice/create/ with project_id.
-    // Since we may not have project_id here, we call a lightweight helper
-    // that looks up the project by lead_id server-side.
-    // If no project exists yet, we skip silently.
     fetch(`/invoice/auto-create-from-lead/`, {
         method: 'POST',
-        headers: {
-            'X-CSRFToken': document.getElementById('csrf_token').value,
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
+        headers: { 'X-CSRFToken': document.getElementById('csrf_token').value, 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ lead_id: leadId })
-    }).catch(() => {}); // silent – invoice page not broken if endpoint missing
+    }).catch(() => {});
 }
 
-// ── GENERATE INVOICE POPUP ────────────────────────────────────────
 function lpGenerateInvoice() {
     const lead = _acceptLeadData;
     if (!lead) return;
 
-    const services     = lead.selected_services || [];
-    const today        = new Date();
-    const dateStr      = today.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
-    const quoteNo      = `AK-INV-${_acceptLeadId || String(today.getTime()).slice(-6)}`;
-    const p            = (lead.pricing_data) || {};
-    const subtotal     = p.subtotal || Number(lead.total_amount) || 0;
-    const discAmt      = p.discountAmount || 0;
-    const gstAmt       = p.gstAmount || 0;
-    const finalTotal   = p.finalTotal || Number(lead.total_amount) || subtotal;
-    const afterDis     = subtotal - discAmt;
-    const paidAmt      = _paidAmountVal || 0;
-    const remaining    = Math.max(0, finalTotal - paidAmt);
+    const services   = lead.selected_services || [];
+    const today      = new Date();
+    const dateStr    = today.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+    const quoteNo    = `AK-INV-${_acceptLeadId || String(today.getTime()).slice(-6)}`;
+    const p          = (lead.pricing_data) || {};
+    const subtotal   = p.subtotal || Number(lead.total_amount) || 0;
+    const discAmt    = p.discountAmount || 0;
+    const gstAmt     = p.gstAmount || 0;
+    const finalTotal = p.finalTotal || Number(lead.total_amount) || subtotal;
+    const afterDis   = subtotal - discAmt;
+    const paidAmt    = _paidAmountVal || 0;
+    const remaining  = Math.max(0, finalTotal - paidAmt);
 
-    // Build service rows
     let serviceRowsHTML = '';
     if (services.length > 0) {
         services.forEach((svc, idx) => {
-            const price    = Number(svc.price) || 0;
-            const crew     = (svc.crew || []).join(', ') || '—';
-            const dels     = (svc.deliverables || []).join(', ') || '—';
-            serviceRowsHTML += `
-                <tr>
-                    <td>
-                        <div class="inv-svc-label">${svc.label}</div>
-                        <div class="inv-svc-sub">👥 ${crew}</div>
-                        <div class="inv-svc-sub">📦 ${dels}</div>
-                    </td>
-                    <td class="tc">1</td>
-                    <td class="tr">₹${price.toLocaleString('en-IN')}</td>
-                    <td class="tr">₹${price.toLocaleString('en-IN')}</td>
-                </tr>`;
+            const price = Number(svc.price) || 0;
+            const crew  = (svc.crew || []).join(', ') || '—';
+            const dels  = (svc.deliverables || []).join(', ') || '—';
+            serviceRowsHTML += `<tr><td><div class="inv-svc-label">${svc.label}</div><div class="inv-svc-sub">👥 ${crew}</div><div class="inv-svc-sub">📦 ${dels}</div></td><td class="tc">1</td><td class="tr">₹${price.toLocaleString('en-IN')}</td><td class="tr">₹${price.toLocaleString('en-IN')}</td></tr>`;
         });
     } else {
-        serviceRowsHTML = `
-            <tr>
-                <td><div class="inv-svc-label">Photography & Videography Package</div>
-                <div class="inv-svc-sub">${lead.event_type}</div></td>
-                <td class="tc">1</td>
-                <td class="tr">₹${subtotal.toLocaleString('en-IN')}</td>
-                <td class="tr">₹${subtotal.toLocaleString('en-IN')}</td>
-            </tr>`;
+        serviceRowsHTML = `<tr><td><div class="inv-svc-label">Photography & Videography Package</div><div class="inv-svc-sub">${lead.event_type}</div></td><td class="tc">1</td><td class="tr">₹${subtotal.toLocaleString('en-IN')}</td><td class="tr">₹${subtotal.toLocaleString('en-IN')}</td></tr>`;
     }
 
-    const discRowHTML = discAmt > 0 ? `
-        <tr class="inv-dis-row">
-            <td colspan="3">${p.discountType==='percent' ? `Discount (${p.discountValue}%)` : 'Flat Discount'}</td>
-            <td class="tr" style="color:#16a34a">−₹${discAmt.toLocaleString('en-IN')}</td>
-        </tr>
-        <tr class="inv-after-row">
-            <td colspan="3" style="font-size:11px;color:#9ca3af">After Discount</td>
-            <td class="tr" style="font-size:11px;color:#9ca3af">₹${afterDis.toLocaleString('en-IN')}</td>
-        </tr>` : '';
+    const discRowHTML = discAmt > 0 ? `<tr class="inv-dis-row"><td colspan="3">${p.discountType==='percent'?`Discount (${p.discountValue}%)`:'Flat Discount'}</td><td class="tr" style="color:#16a34a">−₹${discAmt.toLocaleString('en-IN')}</td></tr><tr class="inv-after-row"><td colspan="3" style="font-size:11px;color:#9ca3af">After Discount</td><td class="tr" style="font-size:11px;color:#9ca3af">₹${afterDis.toLocaleString('en-IN')}</td></tr>` : '';
+    const gstRowHTML  = gstAmt > 0 ? `<tr><td colspan="3">GST (${p.gstRate}%)</td><td class="tr" style="color:#2563eb">+₹${gstAmt.toLocaleString('en-IN')}</td></tr>` : '';
+    const paidRowHTML = paidAmt > 0 ? `<tr class="inv-paid-row"><td colspan="3">Advance Paid</td><td class="tr" style="color:#16a34a">−₹${paidAmt.toLocaleString('en-IN')}</td></tr><tr class="inv-bal-row"><td colspan="3" class="inv-balance-label">Balance Due</td><td class="tr inv-balance-val" style="color:${remaining===0?'#16a34a':'#8B1A1A'}">₹${remaining.toLocaleString('en-IN')}</td></tr>` : '';
 
-    const gstRowHTML = gstAmt > 0 ? `
-        <tr>
-            <td colspan="3">GST (${p.gstRate}%)</td>
-            <td class="tr" style="color:#2563eb">+₹${gstAmt.toLocaleString('en-IN')}</td>
-        </tr>` : '';
-
-    const paidRowHTML = paidAmt > 0 ? `
-        <tr class="inv-paid-row">
-            <td colspan="3">Advance Paid</td>
-            <td class="tr" style="color:#16a34a">−₹${paidAmt.toLocaleString('en-IN')}</td>
-        </tr>
-        <tr class="inv-bal-row">
-            <td colspan="3" class="inv-balance-label">Balance Due</td>
-            <td class="tr inv-balance-val" style="color:${remaining===0?'#16a34a':'#8B1A1A'}">₹${remaining.toLocaleString('en-IN')}</td>
-        </tr>` : '';
-
-    const invoiceHTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Invoice ${quoteNo}</title>
+    const invoiceHTML = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Invoice ${quoteNo}</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--ink:#1a1a2e;--accent:#8B1A1A;--gold:#c9a84c;--muted:#6b7280;--border:#e8e0d8;--cream:#faf8f5}
-body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);padding:40px 20px}
-.page{max-width:820px;margin:0 auto;background:#fff;border-radius:20px;overflow:hidden;
-  box-shadow:0 20px 60px rgba(26,26,46,.12)}
-.hdr{background:var(--ink);padding:44px 52px 32px;position:relative;overflow:hidden}
-.hdr::before{content:'';position:absolute;top:-60px;right:-60px;width:220px;height:220px;
-  border-radius:50%;border:40px solid rgba(201,168,76,.12)}
-.hdr-inner{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1}
-.brand{display:flex;align-items:center;gap:14px}
-.logo{width:52px;height:52px;background:linear-gradient(135deg,var(--accent),#c0392b);border-radius:13px;
-  display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;
-  font-size:20px;font-weight:700;color:#fff;box-shadow:0 4px 16px rgba(139,26,26,.4)}
-.brand-txt h1{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#fff}
-.brand-txt p{font-size:11px;color:rgba(255,255,255,.5);letter-spacing:1.4px;text-transform:uppercase;margin-top:2px}
-.meta{text-align:right}
-.meta .tag{display:inline-block;background:var(--gold);color:var(--ink);font-size:9px;font-weight:700;
-  letter-spacing:2px;text-transform:uppercase;padding:3px 10px;border-radius:20px;margin-bottom:6px}
-.meta .num{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:#fff;line-height:1}
-.meta .dt{font-size:11px;color:rgba(255,255,255,.45);margin-top:3px}
-.ribbon{height:4px;background:linear-gradient(90deg,var(--accent),var(--gold),var(--accent))}
-.body{padding:40px 52px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-bottom:36px;
-  padding-bottom:32px;border-bottom:1.5px solid var(--border)}
-.info-block h4{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
-  color:var(--accent);margin-bottom:10px}
-.info-block .cname{font-family:'Playfair Display',serif;font-size:20px;font-weight:600;margin-bottom:6px}
-.info-block p{font-size:13px;color:var(--muted);line-height:1.7}
-.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
-.chip{background:#f8ece8;color:var(--accent);font-size:11px;font-weight:500;padding:5px 11px;border-radius:20px}
-.tbl-wrap{margin-bottom:28px}
-.tbl-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:600;
-  margin-bottom:14px;display:flex;align-items:center;gap:10px}
-.tbl-title::after{content:'';flex:1;height:1.5px;background:linear-gradient(90deg,var(--border),transparent)}
-table{width:100%;border-collapse:separate;border-spacing:0;border-radius:12px;
-  overflow:hidden;border:1.5px solid var(--border)}
-thead tr{background:var(--ink)}
-thead th{padding:12px 18px;font-size:9.5px;font-weight:600;letter-spacing:1.4px;
-  text-transform:uppercase;color:rgba(255,255,255,.7);text-align:left}
-thead th.tc{text-align:center} thead th.tr{text-align:right}
-tbody tr:nth-child(even){background:#fafaf9}
-td{padding:16px 18px;vertical-align:top;font-size:13px}
-td.tc{text-align:center;color:var(--muted)} td.tr{text-align:right;font-weight:600}
-.inv-svc-label{font-size:13.5px;font-weight:600;margin-bottom:3px}
-.inv-svc-sub{font-size:11px;color:var(--muted);margin-top:2px}
-.inv-dis-row td,.inv-after-row td{background:rgba(220,252,231,.3);font-size:12px;color:var(--muted)}
-.inv-paid-row td,.inv-bal-row td{background:rgba(240,253,244,.5)}
-.inv-balance-label{font-weight:700;font-size:13px;color:var(--ink)}
-.inv-balance-val{font-size:15px!important;font-weight:800!important}
-.totals{display:flex;justify-content:flex-end;margin-bottom:32px}
-.totals-box{width:280px;background:#fdf6e3;border-radius:12px;padding:20px 24px;
-  border:1.5px solid rgba(201,168,76,.3)}
-.t-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;
-  font-size:13px;color:var(--muted);border-bottom:1px solid rgba(201,168,76,.15)}
-.t-row:last-child{border-bottom:none;padding-top:12px;margin-top:4px}
-.t-row.grand{font-family:'Playfair Display',serif;font-size:19px;font-weight:700;color:var(--ink)}
-.t-row.grand span:last-child{color:var(--accent)}
-.notes{background:var(--cream);border-radius:10px;padding:18px 22px;
-  margin-bottom:32px;border-left:3px solid var(--gold)}
-.notes h5{font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;
-  color:var(--gold);margin-bottom:7px}
-.notes p{font-size:12px;color:var(--muted);line-height:1.7}
-.ftr{background:var(--ink);padding:24px 52px;display:flex;justify-content:space-between;align-items:center}
-.ftr p{font-size:11px;color:rgba(255,255,255,.4);line-height:1.6}
-.ftr strong{color:rgba(255,255,255,.65)}
-.stamp{display:inline-flex;align-items:center;gap:7px;background:rgba(201,168,76,.15);
-  border:1px solid rgba(201,168,76,.3);border-radius:7px;padding:7px 14px;
-  font-size:10px;color:var(--gold);font-weight:600}
-.status-badge{display:inline-block;background:${remaining===0?'rgba(22,163,74,.15)':'rgba(139,26,26,.1)'};
-  color:${remaining===0?'#16a34a':'#8B1A1A'};border:1px solid ${remaining===0?'rgba(22,163,74,.3)':'rgba(139,26,26,.25)'};
-  padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.5px;margin-bottom:6px}
-@media print{body{background:#fff;padding:0}.page{box-shadow:none;border-radius:0;max-width:100%}}
-</style>
-</head>
-<body>
-<div class="page">
-  <div class="hdr">
-    <div class="hdr-inner">
-      <div class="brand">
-        <div class="logo">AK</div>
-        <div class="brand-txt">
-          <h1>AK Photography</h1>
-          <p>Premium Visual Storytelling</p>
-        </div>
-      </div>
-      <div class="meta">
-        <div class="tag">Invoice</div>
-        <div class="num">${quoteNo}</div>
-        <div class="dt">Issued: ${dateStr}</div>
-      </div>
-    </div>
-  </div>
-  <div class="ribbon"></div>
-  <div class="body">
-    <div class="grid2">
-      <div class="info-block">
-        <h4>Billed To</h4>
-        <div class="cname">${lead.client_name}</div>
-        <p>📞 ${lead.phone}</p>
-        <p>✉️ ${lead.email}</p>
-      </div>
-      <div class="info-block">
-        <h4>Event Details</h4>
-        <p>📍 ${lead.event_location}</p>
-        <div class="chips">
-          <span class="chip">🎭 ${lead.event_type}</span>
-          <span class="chip">📅 ${_fmtDate(lead.event_start_date)} ${lead.event_start_session}</span>
-          <span class="chip">🏁 ${_fmtDate(lead.event_end_date)} ${lead.event_end_session}</span>
-        </div>
-      </div>
-    </div>
-    <div class="tbl-wrap">
-      <div class="tbl-title">Services &amp; Packages</div>
-      <table>
-        <thead>
-          <tr>
-            <th>Service / Package</th>
-            <th class="tc">Qty</th>
-            <th class="tr">Rate</th>
-            <th class="tr">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${serviceRowsHTML}
-          ${discRowHTML}
-          ${gstRowHTML}
-          <tr style="background:#fdf8f5">
-            <td colspan="3" style="font-weight:700;color:var(--ink);font-size:14px">Total Amount</td>
-            <td class="tr" style="color:var(--accent);font-size:16px;font-weight:800">₹${finalTotal.toLocaleString('en-IN')}</td>
-          </tr>
-          ${paidRowHTML}
-        </tbody>
-      </table>
-    </div>
-    <div class="totals">
-      <div class="totals-box">
-        <div class="t-row"><span>Subtotal</span><span>₹${subtotal.toLocaleString('en-IN')}</span></div>
-        ${discAmt>0?`<div class="t-row"><span>Discount</span><span style="color:#16a34a">−₹${discAmt.toLocaleString('en-IN')}</span></div>`:''}
-        ${gstAmt>0?`<div class="t-row"><span>GST (${p.gstRate}%)</span><span style="color:#2563eb">+₹${gstAmt.toLocaleString('en-IN')}</span></div>`:''}
-        ${paidAmt>0?`<div class="t-row"><span>Advance Paid</span><span style="color:#16a34a">−₹${paidAmt.toLocaleString('en-IN')}</span></div>`:''}
-        <div class="t-row grand"><span>Balance Due</span><span>₹${remaining.toLocaleString('en-IN')}</span></div>
-      </div>
-    </div>
-    <div class="notes">
-      <h5>Terms &amp; Notes</h5>
-      <p>50% advance required to confirm booking. Balance due on event day. All packages include high-resolution digital delivery. Cancellation policy: 14 days notice required for full refund of advance.</p>
-    </div>
-  </div>
-  <div class="ftr">
-    <div><p><strong>AK Photography Studio</strong></p><p>Thank you for choosing us ✨</p></div>
-    <div><div class="stamp">✦ Official Invoice</div></div>
-  </div>
-</div>
-</body>
-</html>`;
+<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}:root{--ink:#1a1a2e;--accent:#8B1A1A;--gold:#c9a84c;--muted:#6b7280;--border:#e8e0d8;--cream:#faf8f5}body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);padding:40px 20px}.page{max-width:820px;margin:0 auto;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(26,26,46,.12)}.hdr{background:var(--ink);padding:44px 52px 32px;position:relative;overflow:hidden}.hdr-inner{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1}.brand{display:flex;align-items:center;gap:14px}.logo{width:52px;height:52px;background:linear-gradient(135deg,var(--accent),#c0392b);border-radius:13px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#fff}.brand-txt h1{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#fff}.brand-txt p{font-size:11px;color:rgba(255,255,255,.5);letter-spacing:1.4px;text-transform:uppercase;margin-top:2px}.meta{text-align:right}.meta .tag{display:inline-block;background:var(--gold);color:var(--ink);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:3px 10px;border-radius:20px;margin-bottom:6px}.meta .num{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:#fff;line-height:1}.meta .dt{font-size:11px;color:rgba(255,255,255,.45);margin-top:3px}.ribbon{height:4px;background:linear-gradient(90deg,var(--accent),var(--gold),var(--accent))}.body{padding:40px 52px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-bottom:36px;padding-bottom:32px;border-bottom:1.5px solid var(--border)}.info-block h4{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:10px}.info-block .cname{font-family:'Playfair Display',serif;font-size:20px;font-weight:600;margin-bottom:6px}.info-block p{font-size:13px;color:var(--muted);line-height:1.7}.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}.chip{background:#f8ece8;color:var(--accent);font-size:11px;font-weight:500;padding:5px 11px;border-radius:20px}.tbl-wrap{margin-bottom:28px}.tbl-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:10px}.tbl-title::after{content:'';flex:1;height:1.5px;background:linear-gradient(90deg,var(--border),transparent)}table{width:100%;border-collapse:separate;border-spacing:0;border-radius:12px;overflow:hidden;border:1.5px solid var(--border)}thead tr{background:var(--ink)}thead th{padding:12px 18px;font-size:9.5px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:rgba(255,255,255,.7);text-align:left}thead th.tc{text-align:center}thead th.tr{text-align:right}tbody tr:nth-child(even){background:#fafaf9}td{padding:16px 18px;vertical-align:top;font-size:13px}td.tc{text-align:center;color:var(--muted)}td.tr{text-align:right;font-weight:600}.inv-svc-label{font-size:13.5px;font-weight:600;margin-bottom:3px}.inv-svc-sub{font-size:11px;color:var(--muted);margin-top:2px}.totals{display:flex;justify-content:flex-end;margin-bottom:32px}.totals-box{width:280px;background:#fdf6e3;border-radius:12px;padding:20px 24px;border:1.5px solid rgba(201,168,76,.3)}.t-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;color:var(--muted);border-bottom:1px solid rgba(201,168,76,.15)}.t-row:last-child{border-bottom:none;padding-top:12px;margin-top:4px}.t-row.grand{font-family:'Playfair Display',serif;font-size:19px;font-weight:700;color:var(--ink)}.t-row.grand span:last-child{color:var(--accent)}.notes{background:var(--cream);border-radius:10px;padding:18px 22px;margin-bottom:32px;border-left:3px solid var(--gold)}.notes h5{font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--gold);margin-bottom:7px}.notes p{font-size:12px;color:var(--muted);line-height:1.7}.ftr{background:var(--ink);padding:24px 52px;display:flex;justify-content:space-between;align-items:center}.ftr p{font-size:11px;color:rgba(255,255,255,.4);line-height:1.6}.ftr strong{color:rgba(255,255,255,.65)}.stamp{display:inline-flex;align-items:center;gap:7px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);border-radius:7px;padding:7px 14px;font-size:10px;color:var(--gold);font-weight:600}@media print{body{background:#fff;padding:0}.page{box-shadow:none;border-radius:0;max-width:100%}}</style>
+</head><body><div class="page">
+<div class="hdr"><div class="hdr-inner"><div class="brand"><div class="logo">AK</div><div class="brand-txt"><h1>AK Photography</h1><p>Premium Visual Storytelling</p></div></div><div class="meta"><div class="tag">Invoice</div><div class="num">${quoteNo}</div><div class="dt">Issued: ${dateStr}</div></div></div></div>
+<div class="ribbon"></div>
+<div class="body">
+<div class="grid2"><div class="info-block"><h4>Billed To</h4><div class="cname">${lead.client_name}</div><p>📞 ${lead.phone}</p><p>✉️ ${lead.email}</p></div>
+<div class="info-block"><h4>Event Details</h4><p>📍 ${lead.event_location}</p><div class="chips"><span class="chip">🎭 ${lead.event_type}</span><span class="chip">📅 ${_fmtDate(lead.event_start_date)} ${lead.event_start_session}</span><span class="chip">🏁 ${_fmtDate(lead.event_end_date)} ${lead.event_end_session}</span></div></div></div>
+<div class="tbl-wrap"><div class="tbl-title">Services &amp; Packages</div>
+<table><thead><tr><th>Service / Package</th><th class="tc">Qty</th><th class="tr">Rate</th><th class="tr">Amount</th></tr></thead>
+<tbody>${serviceRowsHTML}${discRowHTML}${gstRowHTML}<tr style="background:#fdf8f5"><td colspan="3" style="font-weight:700;color:var(--ink);font-size:14px">Total Amount</td><td class="tr" style="color:var(--accent);font-size:16px;font-weight:800">₹${finalTotal.toLocaleString('en-IN')}</td></tr>${paidRowHTML}</tbody></table></div>
+<div class="totals"><div class="totals-box"><div class="t-row"><span>Subtotal</span><span>₹${subtotal.toLocaleString('en-IN')}</span></div>${discAmt>0?`<div class="t-row"><span>Discount</span><span style="color:#16a34a">−₹${discAmt.toLocaleString('en-IN')}</span></div>`:''}${gstAmt>0?`<div class="t-row"><span>GST (${p.gstRate}%)</span><span style="color:#2563eb">+₹${gstAmt.toLocaleString('en-IN')}</span></div>`:''}${paidAmt>0?`<div class="t-row"><span>Advance Paid</span><span style="color:#16a34a">−₹${paidAmt.toLocaleString('en-IN')}</span></div>`:''}
+<div class="t-row grand"><span>Balance Due</span><span>₹${remaining.toLocaleString('en-IN')}</span></div></div></div>
+<div class="notes"><h5>Terms &amp; Notes</h5><p>50% advance required to confirm booking. Balance due on event day. All packages include high-resolution digital delivery. Cancellation policy: 14 days notice required for full refund of advance.</p></div>
+</div><div class="ftr"><div><p><strong>AK Photography Studio</strong></p><p>Thank you for choosing us ✨</p></div><div><div class="stamp">✦ Official Invoice</div></div></div>
+</div></body></html>`;
 
     const win = window.open('', '_blank');
     win.document.write(invoiceHTML);
@@ -4119,37 +3289,27 @@ td.tc{text-align:center;color:var(--muted)} td.tr{text-align:right;font-weight:6
     win.onload = () => setTimeout(() => win.print(), 500);
 }
 
-// ── EDIT LEAD FROM PREVIEW ────────────────────────────────────────
 function lpEditLead() {
     const leadId = _acceptLeadId;
     _closePreviewModal();
-    // Use existing openEditLead — it opens the modal with all fields pre-filled
     setTimeout(() => {
         openEditLead(leadId);
-        // After editLead form loads, patch the submit button text
         setTimeout(() => {
             const submitBtn = document.querySelector('#leadForm .form-actions button[type="submit"]');
             if (submitBtn) {
                 submitBtn.textContent = 'Save Changes';
-                // After save, re-open the preview
-                const origListener = submitBtn._lpPatchedHandler;
                 if (!submitBtn._lpPatched) {
                     submitBtn._lpPatched = true;
-                    submitBtn._lpPatchedHandler = function() {};
-                    // We hook into the form submit success flow
-                    // The existing form submit already calls openLeadSuccessModal and closes form
-                    // We intercept by wrapping closeLeadForm
                     const _origClose = window.closeLeadForm;
                     window.closeLeadForm = function() {
                         _origClose();
-                        // Re-fetch lead and reopen preview
                         setTimeout(() => {
                             fetch(`/leads/get/${leadId}/`)
                                 .then(r => r.json())
                                 .then(updated => {
                                     _acceptLeadData = updated;
                                     _buildAndShowPreview();
-                                    window.closeLeadForm = _origClose; // restore
+                                    window.closeLeadForm = _origClose;
                                 });
                         }, 300);
                     };
@@ -4159,7 +3319,6 @@ function lpEditLead() {
     }, 300);
 }
 
-// ── CLOSE PREVIEW ─────────────────────────────────────────────────
 function _closePreviewModal() {
     const modal = document.getElementById('leadPreviewModal');
     const wrap  = modal.querySelector('.lpm-wrap');
@@ -4168,7 +3327,6 @@ function _closePreviewModal() {
 }
 
 function lpClosePreview() {
-    // On close without accepting — revert card back to FOLLOW_UP/NEW
     const card = document.querySelector(`.card[data-id="${_acceptLeadId}"]`);
     if (card && card.closest('.column[data-status="ACCEPTED"]')) {
         const prevCol = document.querySelector('.column[data-status="FOLLOW_UP"]') ||
@@ -4182,7 +3340,6 @@ function lpClosePreview() {
     _closePreviewModal();
 }
 
-// ── LIVE PAYMENT PREVIEW ─────────────────────────────────────────
 function lpMpLiveCalc() {
     const lead  = _acceptLeadData;
     const total = Number((lead.pricing_data && lead.pricing_data.finalTotal) || lead.total_amount || 0);
@@ -4193,31 +3350,22 @@ function lpMpLiveCalc() {
     const preview = document.getElementById('lpMpLivePreview');
     if (paid > 0) {
         preview.style.display = 'block';
-        preview.innerHTML = `
-            <span>Paid: ₹${paid.toLocaleString('en-IN')}</span>
-            &nbsp;·&nbsp;
-            <span>Remaining: ₹${remaining.toLocaleString('en-IN')}</span>
-            &nbsp;·&nbsp;
-            <span>${pct}% settled</span>
-        `;
+        preview.innerHTML = `<span>Paid: ₹${paid.toLocaleString('en-IN')}</span> &nbsp;·&nbsp; <span>Remaining: ₹${remaining.toLocaleString('en-IN')}</span> &nbsp;·&nbsp; <span>${pct}% settled</span>`;
     } else {
         preview.style.display = 'none';
     }
 }
 
-// ── HELPERS ───────────────────────────────────────────────────────
 function _fmtDate(d) {
     if (!d) return '—';
     try {
         const dt = new Date(d);
         return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
-        return d;
-    }
+    } catch { return d; }
 }
+
 function _buildCardDateLine(services) {
     if (!services || services.length === 0) return '—';
-    
     return services.map(svc => {
         const label = svc.label || svc.key;
         if (svc.dateTBD) return `${label}: TBD`;
@@ -4232,20 +3380,11 @@ function _buildCardDateLine(services) {
     }).join(' · ');
 }
 
+
 // ================================================================
 // CARD DATE POPUP
-// Add this block at the END of dragdrop.js
-// (after all existing code, before the closing </script> if inline)
-//
-// What it does:
-//   - Rewrites the date row on every .card to show first date / "TBD"
-//   - Clicking the row opens a small popup listing all package dates
-//   - No existing logic is touched — pure display enhancement
 // ================================================================
-
 (function () {
-
-    // ── Singleton popup element ──────────────────────────────────
     let _popup = null;
     let _activeTrigger = null;
 
@@ -4255,16 +3394,9 @@ function _buildCardDateLine(services) {
             _popup.className = 'card-dates-popup';
             _popup.innerHTML = `<div class="cdp-arrow"></div><div class="cdp-inner"></div>`;
             document.body.appendChild(_popup);
-
-            // Close on outside click
             document.addEventListener('click', function (e) {
-                if (_popup && !_popup.contains(e.target) &&
-                    _activeTrigger && !_activeTrigger.contains(e.target)) {
-                    _hidePopup();
-                }
+                if (_popup && !_popup.contains(e.target) && _activeTrigger && !_activeTrigger.contains(e.target)) { _hidePopup(); }
             }, true);
-
-            // Close on scroll
             document.addEventListener('scroll', _hidePopup, true);
         }
         return _popup;
@@ -4277,14 +3409,8 @@ function _buildCardDateLine(services) {
         _activeTrigger = null;
     }
 
-    // ── Show popup anchored below a trigger element ──────────────
     function _showPopup(triggerEl, services, clientName) {
-        // If same trigger clicked twice → toggle off
-        if (_activeTrigger === triggerEl) {
-            _hidePopup();
-            return;
-        }
-
+        if (_activeTrigger === triggerEl) { _hidePopup(); return; }
         _hidePopup();
         _activeTrigger = triggerEl;
         triggerEl.classList.add('open');
@@ -4293,13 +3419,11 @@ function _buildCardDateLine(services) {
         const inner = pop.querySelector('.cdp-inner');
         inner.innerHTML = _buildPopupHTML(services, clientName);
 
-        // Position: below trigger
         document.body.appendChild(pop);
         const rect = triggerEl.getBoundingClientRect();
         pop.style.visibility = 'hidden';
         pop.style.display = 'block';
 
-        // Measure then position
         requestAnimationFrame(() => {
             const pw = pop.offsetWidth;
             const ph = pop.offsetHeight;
@@ -4309,38 +3433,26 @@ function _buildCardDateLine(services) {
             let top = rect.bottom + 8;
             let left = rect.left;
 
-            // Flip up if not enough space below
             if (top + ph > vh - 10) {
                 top = rect.top - ph - 8;
-                pop.querySelector('.cdp-arrow').style.cssText =
-                    `top:auto;bottom:-6px;transform:rotate(225deg);border-radius:0 0 2px 0`;
+                pop.querySelector('.cdp-arrow').style.cssText = `top:auto;bottom:-6px;transform:rotate(225deg);border-radius:0 0 2px 0`;
             } else {
-                pop.querySelector('.cdp-arrow').style.cssText =
-                    `top:-6px;bottom:auto;transform:rotate(45deg);border-radius:2px 0 0 0`;
+                pop.querySelector('.cdp-arrow').style.cssText = `top:-6px;bottom:auto;transform:rotate(45deg);border-radius:2px 0 0 0`;
             }
 
-            // Clamp right edge
             if (left + pw > vw - 12) left = vw - pw - 12;
             if (left < 8) left = 8;
 
             pop.style.left = left + 'px';
             pop.style.top  = top  + 'px';
             pop.style.visibility = 'visible';
-
             requestAnimationFrame(() => pop.classList.add('cdp-visible'));
         });
     }
 
-    // ── Build popup inner HTML ───────────────────────────────────
     function _buildPopupHTML(services, clientName) {
         if (!services || services.length === 0) {
-            return `
-                <div class="cdp-header">
-                    ${_headerIconHTML()}
-                    <div><div class="cdp-header-text">Event Dates</div></div>
-                </div>
-                <div class="cdp-empty">No package dates saved yet</div>
-            `;
+            return `<div class="cdp-header">${_headerIconHTML()}<div><div class="cdp-header-text">Event Dates</div></div></div><div class="cdp-empty">No package dates saved yet</div>`;
         }
 
         const rows = services.map(svc => {
@@ -4351,29 +3463,16 @@ function _buildCardDateLine(services) {
 
             let dateHTML = '';
             if (isTBD) {
-                dateHTML = `<span class="cdp-tbd-badge">
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                    TBD
-                </span>`;
+                dateHTML = `<span class="cdp-tbd-badge"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>TBD</span>`;
             } else if (date) {
                 const fmt = _fmtDateShort(date);
-                const sessHTML = sess
-                    ? `<span class="cdp-session-pill">${sess}</span>`
-                    : '';
+                const sessHTML = sess ? `<span class="cdp-session-pill">${sess}</span>` : '';
                 dateHTML = `<span class="cdp-date-val">${fmt}${sessHTML}</span>`;
             } else {
                 dateHTML = `<span style="color:#9ca3af;font-size:11px">No date set</span>`;
             }
 
-            return `
-                <div class="cdp-row">
-                    <div class="cdp-dot ${isTBD ? 'cdp-dot--tbd' : ''}"></div>
-                    <div class="cdp-row-content">
-                        <div class="cdp-pkg-label">${label}</div>
-                        ${dateHTML}
-                    </div>
-                </div>
-            `;
+            return `<div class="cdp-row"><div class="cdp-dot ${isTBD ? 'cdp-dot--tbd' : ''}"></div><div class="cdp-row-content"><div class="cdp-pkg-label">${label}</div>${dateHTML}</div></div>`;
         }).join('');
 
         const confirmedCount = services.filter(s => !s.dateTBD && s.eventDate).length;
@@ -4381,94 +3480,47 @@ function _buildCardDateLine(services) {
             ? `${confirmedCount} date${confirmedCount !== 1 ? 's' : ''} confirmed`
             : `${confirmedCount} of ${services.length} confirmed`;
 
-        return `
-            <div class="cdp-header">
-                ${_headerIconHTML()}
-                <div>
-                    <div class="cdp-header-text">Event Dates</div>
-                    <div class="cdp-header-sub">${subText}</div>
-                </div>
-            </div>
-            ${rows}
-        `;
+        return `<div class="cdp-header">${_headerIconHTML()}<div><div class="cdp-header-text">Event Dates</div><div class="cdp-header-sub">${subText}</div></div></div>${rows}`;
     }
 
     function _headerIconHTML() {
-        return `
-            <div class="cdp-header-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-                     stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2"/>
-                    <line x1="16" y1="2" x2="16" y2="6"/>
-                    <line x1="8"  y1="2" x2="8"  y2="6"/>
-                    <line x1="3"  y1="10" x2="21" y2="10"/>
-                </svg>
-            </div>
-        `;
+        return `<div class="cdp-header-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>`;
     }
 
     function _fmtDateShort(d) {
-        try {
-            const dt = new Date(d + 'T00:00:00');
-            return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-        } catch { return d; }
+        try { const dt = new Date(d + 'T00:00:00'); return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
+        catch { return d; }
     }
 
-    // ── Get first display date for card row ──────────────────────
     function _getFirstDateDisplay(services) {
         if (!services || services.length === 0) return null;
-
-        // First confirmed (non-TBD) date
         const confirmed = services.filter(s => !s.dateTBD && s.eventDate);
         if (confirmed.length > 0) {
-            // Sort by date
             confirmed.sort((a, b) => a.eventDate.localeCompare(b.eventDate));
             const s = confirmed[0];
             return _fmtDateShort(s.eventDate) + (s.eventSession ? ' · ' + s.eventSession : '');
         }
-
-        // All TBD
-        if (services.every(s => s.dateTBD)) {
-            return 'All dates TBD';
-        }
-
-        return null; // fall back to legacy event_start_date
+        if (services.every(s => s.dateTBD)) return 'All dates TBD';
+        return null;
     }
 
-    // ── Patch a single card's date row ───────────────────────────
     function _patchCardDateRow(card) {
-        // Already patched?
         if (card.dataset.datePatchDone === '1') return;
 
-        // Read selected_services from the data attribute we'll add,
-        // OR fall back to global window.selectedPackageServices if this is
-        // the card being built right now (injectNewLeadCard path).
         let services = null;
-        try {
-            const raw = card.dataset.selectedServices;
-            if (raw) services = JSON.parse(raw);
-        } catch (e) {}
+        try { const raw = card.dataset.selectedServices; if (raw) services = JSON.parse(raw); } catch (e) {}
 
         if (!services || services.length === 0) return;
-
-        // Check if any has eventDate or dateTBD set
         const hasDateData = services.some(s => s.eventDate || s.dateTBD);
         if (!hasDateData) return;
 
-        // Find the calendar date row — the one with the 📅 or calendar svg img
         const rows = card.querySelectorAll('.card-row');
         let dateRow = null;
         rows.forEach(r => {
             const text = r.innerText || '';
-            // Identify it by presence of session keywords or date pattern
-            if (
-                r.querySelector('img[src*="calender"]') ||
-                r.querySelector('img[src*="calendar"]') ||
-                /\d{4}[-/]\d{2}[-/]\d{2}/.test(text) ||
-                /Morning|Evening/.test(text) ||
-                text.includes('–') ||
-                text.includes('TBD')
-            ) {
+            if (r.querySelector('img[src*="calender"]') || r.querySelector('img[src*="calendar"]') ||
+                /\d{4}[-/]\d{2}[-/]\d{2}/.test(text) || /Morning|Evening/.test(text) ||
+                text.includes('–') || text.includes('TBD')) {
                 dateRow = r;
             }
         });
@@ -4479,18 +3531,10 @@ function _buildCardDateLine(services) {
         const calSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;opacity:0.6"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
         const chevronSvg = `<svg class="cdt-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
 
-        // Preserve any leading <img> the template puts in
         const existingImg = dateRow.querySelector('img');
         const imgHTML = existingImg ? existingImg.outerHTML : calSvg;
 
-        // Replace row contents with trigger
-        dateRow.innerHTML = `
-            <div class="card-date-trigger" role="button" tabindex="0" aria-label="View event dates">
-                ${imgHTML}
-                <span class="cdt-main">${firstDisplay || dateRow.innerText.trim() || '—'}</span>
-                ${chevronSvg}
-            </div>
-        `;
+        dateRow.innerHTML = `<div class="card-date-trigger" role="button" tabindex="0" aria-label="View event dates">${imgHTML}<span class="cdt-main">${firstDisplay || dateRow.innerText.trim() || '—'}</span>${chevronSvg}</div>`;
 
         const trigger = dateRow.querySelector('.card-date-trigger');
         trigger.addEventListener('click', function (e) {
@@ -4498,41 +3542,30 @@ function _buildCardDateLine(services) {
             _showPopup(trigger, services, card.querySelector('.card-title')?.textContent?.trim());
         });
         trigger.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                _showPopup(trigger, services, card.querySelector('.card-title')?.textContent?.trim());
-            }
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); _showPopup(trigger, services, card.querySelector('.card-title')?.textContent?.trim()); }
         });
 
         card.dataset.datePatchDone = '1';
     }
 
-    // ── Patch all cards currently in DOM ─────────────────────────
     function patchAllCards() {
         document.querySelectorAll('.card[data-selected-services]').forEach(_patchCardDateRow);
     }
 
-    // ── Expose so injectNewLeadCard can call after building ──────
     window._patchCardDateRow = _patchCardDateRow;
     window._patchAllCards    = patchAllCards;
 
-    // ── Run on DOM ready ─────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', patchAllCards);
 
-    // ── MutationObserver: patch cards injected dynamically ───────
     const _cardObserver = new MutationObserver(mutations => {
         mutations.forEach(m => {
             m.addedNodes.forEach(node => {
                 if (node.nodeType === 1) {
-                    if (node.classList && node.classList.contains('card') && node.dataset.selectedServices) {
-                        _patchCardDateRow(node);
-                    }
-                    node.querySelectorAll && node.querySelectorAll('.card[data-selected-services]')
-                        .forEach(_patchCardDateRow);
+                    if (node.classList && node.classList.contains('card') && node.dataset.selectedServices) { _patchCardDateRow(node); }
+                    node.querySelectorAll && node.querySelectorAll('.card[data-selected-services]').forEach(_patchCardDateRow);
                 }
             });
         });
     });
     _cardObserver.observe(document.body, { childList: true, subtree: true });
-
 })();

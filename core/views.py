@@ -2585,6 +2585,8 @@ def quotation_view(request, lead_id):
         'pricing_data':        pricing_ctx,
         'total_amount_display': _fmt_inr(int(total_amount)),
         'has_extras':          has_extras,
+         'selected_services_json': json.dumps(enriched),
+    'pricing_json':           json.dumps(pricing_ctx),
     })
 
 
